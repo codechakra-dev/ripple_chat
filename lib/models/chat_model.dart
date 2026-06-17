@@ -15,11 +15,11 @@ class ChatModel {
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['chatId'] = this.chatId;
-    data['participants'] = this.participants;
-    data['lastMessage'] = this.lastMessage;
-    data['lastMessageTime'] = this.lastMessageTime;
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['chatId'] = chatId;
+    data['participants'] = participants;
+    data['lastMessage'] = lastMessage;
+    data['lastMessageTime'] = lastMessageTime;
     return data;
   }
 }

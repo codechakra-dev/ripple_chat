@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "724202877098",
+    "project_id": "ripple-71db4",
+    "storage_bucket": "ripple-71db4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:724202877098:android:47216cf615dfc9a251a0d3",
+        "android_client_info": {
+          "package_name": "com.codechakra.ripple"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "724202877098-t51r0hm9hfkeb3k310st7v69cnod3plo.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAv2KzUxbios9qVfbEKqDZxOyGGU_gWFPg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "724202877098-t51r0hm9hfkeb3k310st7v69cnod3plo.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

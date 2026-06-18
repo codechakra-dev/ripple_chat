@@ -6,13 +6,15 @@ class UserModel {
   bool? isOnline;
   String? lastSeen;
 
-  UserModel(
-      {this.uid,
-        this.name,
-        this.email,
-        this.photoUrl,
-        this.isOnline,
-        this.lastSeen});
+  UserModel({
+
+    this.uid,
+    this.name,
+    this.email,
+    this.photoUrl,
+    this.isOnline,
+    this.lastSeen
+  });
 
   UserModel.fromJson(Map<String, dynamic> json) {
     uid = json['uid'];

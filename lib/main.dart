@@ -13,10 +13,11 @@ import 'package:ripple/screens/profile/profile_screen.dart';
 import 'package:ripple/screens/splash/splash_screen.dart';
 
 import 'core/constants/app_strings.dart';
+import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(
     MultiProvider(
       providers: [
@@ -49,7 +50,6 @@ class MyApp extends StatelessWidget {
         AppStrings.loginScreen : (context) => const LoginScreen(),
         AppStrings.registerScreen : (context)=> const RegisterScreen(),
         AppStrings.profileScreen : (context) => const ProfileScreen()
-
 
       },
     );

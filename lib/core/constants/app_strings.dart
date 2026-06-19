@@ -1,4 +1,8 @@
 class AppStrings {
+  //Fonts
+  static const poppins = "Poppins";
+
+  //Nav paths
   static const splashScreen = "/";
   static const forgotPasswordScreen = "/forgotpassword";
   static const loginScreen = "/login";

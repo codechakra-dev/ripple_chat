@@ -8,9 +8,10 @@ class SnackBarHelper {
       SnackBar(
         behavior: SnackBarBehavior.floating,
         content: Row(
+          spacing: 7,
           children: [
-            CustomText(text: title),
-            CustomText(text: message),
+            Expanded(child: CustomText(text: title)),
+            Expanded(child: CustomText(text: message)),
           ],
         ),
 

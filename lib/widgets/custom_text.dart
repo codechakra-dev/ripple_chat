@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ripple/core/constants/app_strings.dart';
 
 class CustomText extends StatelessWidget {
   final String text;
@@ -24,7 +25,7 @@ class CustomText extends StatelessWidget {
         color: color,
         fontSize: fontSize,
         fontWeight: fontWeight,
-        fontFamily: fontFamily
+        fontFamily: fontFamily ?? AppStrings.poppins,
       ),
     );
   }

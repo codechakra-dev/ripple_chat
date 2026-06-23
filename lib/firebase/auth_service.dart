@@ -9,11 +9,12 @@ class AuthService {
   FirebaseAuth get firebaseAuth => _firebaseAuth;
 
   //SIGN UP USING EMAIL AND PASSWORD
-  Future<void> signUpWithEmail(String email, String password) async {
+  Future<UserCredential> signUpWithEmail(String email, String password) async {
     final UserCredential userCredential = await _firebaseAuth
         .createUserWithEmailAndPassword(email: email, password: password);
 
     await userCredential.user?.sendEmailVerification();
+    return userCredential;
   }
 
   //SIGN IN USING EMAIL AND PASSWORD
@@ -23,13 +24,13 @@ class AuthService {
   }
 
   //SIGN IN USING GOOGLE
-  Future<void> signInUsingGoogle() async {
-    await _googleSignInService.handGoogleSignIn(firebaseAuth);
+  Future<UserCredential?> signInUsingGoogle() async {
+    return await _googleSignInService.handGoogleSignIn(firebaseAuth);
   }
 
   //SIGN UP USING GOOGLE
-  Future<void> signUpUsingGoogle() async {
-    await _googleSignInService.handGoogleSignIn(firebaseAuth);
+  Future<UserCredential?> signUpUsingGoogle() async {
+    return await _googleSignInService.handGoogleSignIn(firebaseAuth);
   }
 
   //SIGN OUT USER

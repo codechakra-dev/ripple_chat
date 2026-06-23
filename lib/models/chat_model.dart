@@ -1,25 +1,38 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class ChatModel {
-  String? chatId;
-  List<String>? participants;
-  String? lastMessage;
-  String? lastMessageTime;
+  final String chatId;              // Non-nullable, from doc.id
+  final List<String> participants;
+  final String lastMessage;
+  final DateTime? lastMessageTime;  // 👈 DateTime, not String!
 
-  ChatModel(
-      {this.chatId, this.participants, this.lastMessage, this.lastMessageTime});
+  ChatModel({
+    required this.chatId,
+    required this.participants,
+    required this.lastMessage,
+    this.lastMessageTime,
+  });
 
-  ChatModel.fromJson(Map<String, dynamic> json) {
-    chatId = json['chatId'];
-    participants = json['participants'].cast<String>();
-    lastMessage = json['lastMessage'];
-    lastMessageTime = json['lastMessageTime'];
+  // Firestore factory (replaces fromJson)
+  factory ChatModel.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return ChatModel(
+      chatId: doc.id, // Document ID is the chatId
+      participants: List<String>.from(data['participants'] ?? []),
+      lastMessage: data['lastMessage'] ?? '',
+      lastMessageTime: (data['lastMessageTime'] as Timestamp?)?.toDate(),
+    );
   }
 
-  Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = <String, dynamic>{};
-    data['chatId'] = chatId;
-    data['participants'] = participants;
-    data['lastMessage'] = lastMessage;
-    data['lastMessageTime'] = lastMessageTime;
-    return data;
+  // Firestore map (replaces toJson)
+  Map<String, dynamic> toMap() {
+    return {
+      'chatId': chatId,
+      'participants': participants,
+      'lastMessage': lastMessage,
+      'lastMessageTime': lastMessageTime != null
+          ? Timestamp.fromDate(lastMessageTime!)
+          : FieldValue.serverTimestamp(), // For new chats
+    };
   }
 }

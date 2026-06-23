@@ -6,7 +6,9 @@ import 'package:ripple/core/utils/auth_error_helper.dart';
 import 'package:ripple/core/utils/email_validation.dart';
 import 'package:ripple/core/utils/snackbar_helper.dart';
 import 'package:ripple/firebase/auth_service.dart';
+import 'package:ripple/firebase/firebase_service.dart';
 import 'package:ripple/main.dart';
+import 'package:ripple/models/user_model.dart';
 
 class AuthenticationProvider extends ChangeNotifier {
   final emailController = TextEditingController();
@@ -20,14 +22,16 @@ class AuthenticationProvider extends ChangeNotifier {
 
   var isCodeSent = false;
   var hidePassword = false;
-  User? _firebaseUser;
+
+  //  User? _firebaseUser;
   final AuthService _authService = AuthService();
+  final FirebaseService _firebaseService = FirebaseService();
 
   //Call this method in splash screen
   void onInitialization() {
     // _firebaseUser = _authService.firebaseAuth.currentUser;
     _authService.firebaseAuth.authStateChanges().listen((user) {
-      _firebaseUser = user;
+      // _firebaseUser = user;
       if (user == null) {
         navigatorKey.currentState?.pushReplacementNamed(AppStrings.loginScreen);
       } else {
@@ -37,14 +41,14 @@ class AuthenticationProvider extends ChangeNotifier {
       notifyListeners();
     });
 
-    emailController.addListener(() {
-      print("Email: ${emailController.text}");
-    });
+    // emailController.addListener(() {
+    //   print("Email: ${emailController.text}");
+    // });
   }
 
   void togglePasswordVisibility() {
     hidePassword = !hidePassword;
-    print("Hide password: ${hidePassword}");
+    // print("Hide password: ${hidePassword}");
     notifyListeners();
   }
 
@@ -53,7 +57,20 @@ class AuthenticationProvider extends ChangeNotifier {
     try {
       isLoading = true;
       notifyListeners();
-      await _authService.signInUsingGoogle();
+      UserCredential? userCredential = await _authService.signInUsingGoogle();
+
+      //Create a new user if user has signed up
+      if (userCredential != null &&
+          userCredential.additionalUserInfo!.isNewUser) {
+        await _firebaseService.createUser(
+          UserModel(
+            uid: userCredential.user?.uid ?? "",
+            name: userCredential.user?.displayName ?? "",
+            email: userCredential.user?.email ?? "",
+            isOnline: true,
+          ),
+        );
+      }
     } catch (e) {
       if (context.mounted) {
         SnackBarHelper.showSnackBar(context, "Error", e.toString());
@@ -146,7 +163,20 @@ class AuthenticationProvider extends ChangeNotifier {
 
     try {
       isLoading = true;
-      await _authService.signUpWithEmail(email, password);
+      UserCredential userCredential = await _authService.signUpWithEmail(
+        email,
+        password,
+      );
+      if (userCredential.additionalUserInfo!.isNewUser) {
+        _firebaseService.createUser(
+          UserModel(
+            uid: userCredential.user?.uid ?? "",
+            name: userCredential.user?.displayName ?? "",
+            email: userCredential.user?.email ?? "",
+            isOnline: true,
+          ),
+        );
+      }
     } on FirebaseAuthException catch (e) {
       String message = Autherrorhelper.authErrorMessage(e.code);
       if (context.mounted) {
@@ -200,18 +230,18 @@ class AuthenticationProvider extends ChangeNotifier {
       return;
     }
     try {
-      isCodeSent =false;
+      isCodeSent = false;
       isLoading = true;
       notifyListeners();
-     await _authService.forgotPassword(email);
+      await _authService.forgotPassword(email);
       isCodeSent = true;
       notifyListeners();
-    } on FirebaseAuthException catch(e){
+    } on FirebaseAuthException catch (e) {
       String message = Autherrorhelper.authErrorMessage(e.code);
-      if(context.mounted){
+      if (context.mounted) {
         SnackBarHelper.showSnackBar(context, "Failed", message);
       }
-    }catch (e) {
+    } catch (e) {
       isCodeSent = false;
       notifyListeners();
       if (context.mounted) {
@@ -221,16 +251,17 @@ class AuthenticationProvider extends ChangeNotifier {
           'An unexpected error occurred: $e',
         );
       }
-    }finally{
-      isLoading  = false;
+    } finally {
+      isLoading = false;
       notifyListeners();
     }
   }
 
-
-  Future<void> confirmPasswordResetRequest(BuildContext context, String code, String newPassword) async {
-
-
+  Future<void> confirmPasswordResetRequest(
+    BuildContext context,
+    String code,
+    String newPassword,
+  ) async {
     if (newPassword.length < 6) {
       SnackBarHelper.showSnackBar(
         context,
@@ -248,31 +279,33 @@ class AuthenticationProvider extends ChangeNotifier {
       );
       return;
     }
-    try{
-        isLoading = true;
+    try {
+      isLoading = true;
 
-        notifyListeners();
+      notifyListeners();
       await _authService.confirmResetPassword(code, newPassword);
-      if(context.mounted){
-        SnackBarHelper.showSnackBar(context, "Success", "Password reset successfully!");
+      if (context.mounted) {
+        SnackBarHelper.showSnackBar(
+          context,
+          "Success",
+          "Password reset successfully!",
+        );
       }
-    }on FirebaseAuthException catch(e){
+    } on FirebaseAuthException catch (e) {
       String message = Autherrorhelper.authErrorMessage(e.code);
-      if(context.mounted){
+      if (context.mounted) {
         SnackBarHelper.showSnackBar(context, "Failed", message);
       }
-    }
-
-    catch(e){
-      if(context.mounted){
+    } catch (e) {
+      if (context.mounted) {
         SnackBarHelper.showSnackBar(context, "Unexpected error: ", "$e");
       }
-    }finally{
+    } finally {
       isLoading = false;
       notifyListeners();
     }
-
   }
+
   void clearAllControllers() {
     emailController.clear();
     passwordController.clear();

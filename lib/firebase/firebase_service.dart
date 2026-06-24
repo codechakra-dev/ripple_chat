@@ -21,7 +21,6 @@ class FirebaseService {
   //Chats collection reference
   CollectionReference get chatsReference => _firestore.collection("chats");
 
-
   // --- GET ALL USERS ---
   Stream<List<UserModel>> getAllUsers() {
     return usersRef.snapshots().map((snapshots) {
@@ -29,6 +28,20 @@ class FirebaseService {
         return UserModel.fromFirestore(doc);
       }).toList();
     });
+  }
+
+  // ---GET SINGLE USER---
+
+  Stream<UserModel> getSingleUser(String userId) {
+    return usersRef
+        .doc(userId)
+        .snapshots()
+        .map((doc) => UserModel.fromFirestore(doc));
+  }
+
+  Future<UserModel> getUser(String userId) async {
+    DocumentSnapshot? doc = await usersRef.doc(userId).get();
+    return UserModel.fromFirestore(doc);
   }
 
   //--- GET ALL CHATS ---
@@ -39,7 +52,19 @@ class FirebaseService {
     });
   }
 
+
+
+  //--- GET SINGLE CHAT
+  Stream<ChatModel> getSingleChat(String chatId){
+    return chatsReference.doc(chatId).snapshots().map((doc)=> ChatModel.fromFirestore(doc));
+  }
+
   //-- GET MESSAGES FOR SINGLE CONVERSATION ONLY FOR CURRENT USER USING CHAT ID ---
+
+  Future<bool> doesChatExists(String chatId) async {
+    var docRef = await  _firestore.collection("chats").doc(chatId).get();
+    return docRef.exists;
+  }
 
   Stream<List<MessageModel>> getMessageForCurrentConvo(String chatId) {
     return _firestore
@@ -56,12 +81,8 @@ class FirebaseService {
 
   //  Create user
   Future<void> createUser(UserModel user) async {
-
-   await usersRef.doc(user.uid).set(user.toMap());
+    await usersRef.doc(user.uid).set(user.toMap());
   }
-
-
-
 
   //--For sending a message
   Future<DocumentReference> addMessage(
@@ -74,35 +95,38 @@ class FirebaseService {
         .collection("messages")
         .add(message.toMapForSending());
   }
-  
-  Future<void> updateAMessage(String chatId, MessageModel updatedMessage) async{
-    
-     await _firestore
+
+  Future<void> updateAMessage(
+    String chatId,
+    MessageModel updatedMessage,
+  ) async {
+    await _firestore
         .collection("chats")
         .doc(chatId)
-        .collection("messages").doc(updatedMessage.messageId).set(updatedMessage.toMapForSending());
+        .collection("messages")
+        .doc(updatedMessage.messageId)
+        .set(updatedMessage.toMapForSending());
   }
 
   Future<void> deleteMessage(String chatId, MessageModel message) async {
     await _firestore
         .collection("chats")
         .doc(chatId)
-        .collection("messages").doc(message.messageId).delete();
+        .collection("messages")
+        .doc(message.messageId)
+        .delete();
   }
 
-
   //Create a chat between currentUser and receiver user
-  Future<void> createChat(ChatModel chat) async{
+  Future<void> createChat(ChatModel chat) async {
     await chatsReference.doc(chat.chatId).set(chat.toMap());
-
   }
 
   //Update current user state
   Future<void> updateCurrentStatus(bool isOnline) async {
-   DocumentSnapshot? doc = await currentUserRef.get();
-   UserModel userModel =  UserModel.fromFirestore(doc);
-   UserModel userModel1 = userModel.copyWith(isOnline: isOnline);
-   await currentUserRef.set(userModel1.toMap());
+    DocumentSnapshot? doc = await currentUserRef.get();
+    UserModel userModel = UserModel.fromFirestore(doc);
+    UserModel userModel1 = userModel.copyWith(isOnline: isOnline);
+    await currentUserRef.set(userModel1.toMap());
   }
-
 }

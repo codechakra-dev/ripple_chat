@@ -23,9 +23,11 @@ class AuthenticationProvider extends ChangeNotifier {
   var isCodeSent = false;
   var hidePassword = false;
 
-  //  User? _firebaseUser;
+   User? _currentUser;
   final AuthService _authService = AuthService();
   final FirebaseService _firebaseService = FirebaseService();
+
+  User? get currentUser => _currentUser;
 
   //Call this method in splash screen
   void onInitialization() {
@@ -35,6 +37,7 @@ class AuthenticationProvider extends ChangeNotifier {
       if (user == null) {
         navigatorKey.currentState?.pushReplacementNamed(AppStrings.loginScreen);
       } else {
+        user = user;
         clearAllControllers();
         navigatorKey.currentState?.pushReplacementNamed(AppStrings.homeScreen);
       }

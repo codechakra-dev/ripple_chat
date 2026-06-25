@@ -151,7 +151,7 @@ class ChatProvider extends ChangeNotifier {
 
       print('MessageId : sending');
       // print('MessageId : ${id}');
-      messageInputController.clear();
+      messageInputController.text = "";
     } else {
       print('MessageId : else  ${currentChatId}');
       print('MessageId : else  ${text}');

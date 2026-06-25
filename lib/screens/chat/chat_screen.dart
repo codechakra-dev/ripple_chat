@@ -1,4 +1,5 @@
 // screens/chat/chat_screen.dart
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ripple/models/message_model.dart';
@@ -24,16 +25,18 @@ class ChatScreen extends StatelessWidget {
     final currentUserId = authProvider.currentUser?.uid ?? '';
 
     // 2️⃣ Load messages & status (only once per chatId change)
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (chatId.isNotEmpty) {
-        // Only load if messages are empty OR the chatId changed (optional safety)
-        // Our getMessages method cancels previous subscription anyway.
-        chatProvider.getMessages(chatId);
-      }
-      if (receiver != null && receiver.uid.isNotEmpty) {
-        chatProvider.getReceiverUserLiveStatus(receiver.uid);
-      }
-    });
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //
+    // });
+    if (chatId.isNotEmpty) {
+      // Only load if messages are empty OR the chatId changed (optional safety)
+      // Our getMessages method cancels previous subscription anyway.
+      // print("Initial ChatId : $chatId");
+      chatProvider.getMessages(chatId);
+    }
+    if (receiver != null && receiver.uid.isNotEmpty) {
+      chatProvider.getReceiverUserLiveStatus(receiver.uid);
+    }
 
     // 3️⃣ Build UI
     return Scaffold(
@@ -51,7 +54,10 @@ class ChatScreen extends StatelessWidget {
               children: [
                 Text(
                   _getDisplayName(receiver),
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
                 Text(
                   isOnline ? 'Online' : 'Offline',
@@ -68,55 +74,79 @@ class ChatScreen extends StatelessWidget {
         elevation: 0.5,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
+          onPressed: (){
+
+            Navigator.pop(context);
+            // 1. Force the keyboard to close by removing focus
+            FocusManager.instance.primaryFocus?.unfocus();
+            FocusScope.of(context).unfocus();
+            chatProvider.messageInputController.text = "";
+            chatProvider.currentChatId = "";
+            chatProvider.previousMessage = null;
+            chatProvider.closeSubscriptions();
+
+
+          },
         ),
       ),
       body: receiver == null
           ? const Center(child: Text('Conversation not found'))
           : Column(
-        children: [
-          // Messages list
-          Expanded(
-            child:
+              children: [
+                // Messages list
+                Expanded(
+                  child: messages.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.chat_bubble_outline,
+                                size: 60,
+                                color: Colors.grey.shade400,
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'No messages yet',
+                                style: TextStyle(
+                                  color: Colors.grey.shade500,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Say hello to ${_getDisplayName(receiver)}',
+                                style: TextStyle(
+                                  color: Colors.grey.shade400,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
 
+                          controller: chatProvider.scrollController,
+                          reverse: false,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 12,
+                          ),
+                          itemCount: messages.length,
+                          itemBuilder: (context, index) {
+                            final message = messages[index];
 
-            messages.isEmpty
-                ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.chat_bubble_outline, size: 60, color: Colors.grey.shade400),
-                  const SizedBox(height: 12),
-                  Text(
-                    'No messages yet',
-                    style: TextStyle(color: Colors.grey.shade500, fontSize: 16),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Say hello to ${_getDisplayName(receiver)}',
-                    style: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-                  ),
-                ],
-              ),
-            )
-                :
-
-            ListView.builder(
-              reverse: true,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-              itemCount: messages.length,
-              itemBuilder: (context, index) {
-                final message = messages[index];
-                final isMe = message.senderId == currentUserId;
-
-                return _buildMessageBubble(message, isMe);
-              },
+                            final isMe = message.senderId == currentUserId;
+                            return _buildMessageBubble(message, isMe);
+                          },
+                        ),
+                ),
+                // Input field
+                const SizedBox(height: 10,),
+                const MessageInput(),
+                //_buildMessageInput(context, chatId, currentUserId),
+              ],
             ),
-          ),
-          // Input field
-          _buildMessageInput(context, chatId, currentUserId),
-        ],
-      ),
     );
   }
 
@@ -132,8 +162,12 @@ class ChatScreen extends StatelessWidget {
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
             topRight: const Radius.circular(16),
-            bottomLeft: isMe ? const Radius.circular(16) : const Radius.circular(4),
-            bottomRight: isMe ? const Radius.circular(4) : const Radius.circular(16),
+            bottomLeft: isMe
+                ? const Radius.circular(16)
+                : const Radius.circular(4),
+            bottomRight: isMe
+                ? const Radius.circular(4)
+                : const Radius.circular(16),
           ),
         ),
         child: Column(
@@ -161,29 +195,40 @@ class ChatScreen extends StatelessWidget {
   }
 
   // ---- Message Input ----
-  Widget _buildMessageInput(BuildContext context, String chatId, String currentUserId) {
-    final TextEditingController controller = context.read<ChatProvider>().messageInputController;
+  Widget _buildMessageInput(
+    BuildContext context,
+    String chatId,
+    String currentUserId,
+  ) {
+    final TextEditingController controller = context
+        .read<ChatProvider>()
+        .messageInputController;
 
-
-    void sendMessage() async {
+    void sendMessage() {
+      // await FirebaseFirestore.instance.collection('chats').doc('test43').set({
+      //   'test': true,
+      // });
       final text = controller.text.trim();
 
       if (text.isEmpty || chatId.isEmpty) return;
-      print("Chat id: ${chatId}");
-      final chatProvider = context.read<ChatProvider>();
-      final receiver = chatProvider.receiverUser;
-      if (receiver == null) return;
+      if (context.mounted) {
+        final chatProvider = context.read<ChatProvider>();
+        final receiver = chatProvider.receiverUser;
+        if (receiver == null) return;
 
-      final message = MessageModel(
-        messageId: '',
-        senderId: currentUserId,
-        receiverId: receiver.uid,
-        message: text,
-        messageType: MessageType.text,
-      );
-     var id = await chatProvider.addMessage(chatId, message);
-      print('MessageId : ${id}');
-      controller.clear();
+        final message = MessageModel(
+          messageId: '',
+          senderId: currentUserId,
+          receiverId: receiver.uid,
+          message: text,
+          messageType: MessageType.text,
+        );
+
+        chatProvider.addMessage(chatId, message);
+        print('MessageId : sending');
+        // print('MessageId : ${id}');
+        controller.clear();
+      }
     }
 
     return Container(
@@ -211,9 +256,11 @@ class ChatScreen extends StatelessWidget {
                 ),
                 filled: true,
                 fillColor: Colors.grey.shade100,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
               ),
-
             ),
           ),
           const SizedBox(width: 8),
@@ -251,7 +298,11 @@ class ChatScreen extends StatelessWidget {
     final displayName = _getDisplayName(user);
     return Text(
       displayName.isNotEmpty ? displayName[0].toUpperCase() : '?',
-      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.blue),
+      style: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        color: Colors.blue,
+      ),
     );
   }
 
@@ -273,5 +324,61 @@ class ChatScreen extends StatelessWidget {
     } else {
       return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
     }
+  }
+}
+
+class MessageInput extends StatelessWidget {
+  const MessageInput({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = context.read<ChatProvider>().messageInputController;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 6,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: controller,
+              decoration: InputDecoration(
+                hintText: 'Type a message...',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  borderSide: BorderSide.none,
+                ),
+                filled: true,
+                fillColor: Colors.grey.shade100,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          CircleAvatar(
+            backgroundColor: Colors.blue,
+            child: IconButton(
+              icon: const Icon(Icons.send, color: Colors.white),
+              onPressed: () {
+                context.read<ChatProvider>().sendMessage(
+                  receiverUser: context.read<UserProvider>().receiverUser,
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

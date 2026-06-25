@@ -37,7 +37,7 @@ class AuthenticationProvider extends ChangeNotifier {
       if (user == null) {
         navigatorKey.currentState?.pushReplacementNamed(AppStrings.loginScreen);
       } else {
-        user = user;
+        _currentUser = user;
         clearAllControllers();
         navigatorKey.currentState?.pushReplacementNamed(AppStrings.homeScreen);
       }

@@ -31,7 +31,7 @@ class UserProvider extends ChangeNotifier {
     );
   }
 
-  void startConversation(UserModel receiverUser, BuildContext context) {
+  void startConversation(UserModel receiverUser, BuildContext context, bool isHomeScreen) {
     String? currentUserId = _firebaseService.userUid;
     this.receiverUser = receiverUser;
     currentChatId = Helper.generateChatId(
@@ -41,22 +41,40 @@ class UserProvider extends ChangeNotifier {
 
     // Navigate to ChatScreen and remove NewChatScreen from the stack
 
-    Navigator.pushReplacementNamed(context, AppStrings.chatScreen);
+    if(isHomeScreen){
+
+    Navigator.pushNamed(context, AppStrings.chatScreen);
+    }else{
+      Navigator.pushReplacementNamed(context, AppStrings.chatScreen);
+    }
   }
 
   void getAvailableUsers() {
-    _firebaseService.getAllUsers().listen((list) {
-      users = list;
-      // print("Users : ${list[0].name}");
-      notifyListeners();
-    });
+
+    try{
+      _firebaseService.getAllUsers().listen((list) {
+        users = list;
+        // print("Users : ${list[0].name}");
+        notifyListeners();
+      });
+    }catch(e){
+      print("Get all user: $e");
+    }
+
   }
 
   void getChats() {
-    _firebaseService.getAllChats().listen((list) {
-      chats = list;
-      notifyListeners();
-    });
+
+    try{
+      _firebaseService.getAllChats().listen((list) {
+        chats = list;
+        notifyListeners();
+      });
+
+    }catch(e){
+
+      print("Get chats: $e");
+    }
   }
 
   @override

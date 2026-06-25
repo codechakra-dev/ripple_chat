@@ -196,7 +196,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
       ),
       onTap: () {
           //Navigate to chat screen to start conversation
-          context.read<UserProvider>().startConversation(user, context);
+          context.read<UserProvider>().startConversation(user, context,false);
 
       },
     );

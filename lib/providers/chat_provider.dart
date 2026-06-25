@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:ripple/firebase/firebase_service.dart';
 import 'package:flutter/material.dart';
@@ -6,38 +8,54 @@ import 'package:ripple/models/chat_preview_model.dart';
 import 'package:ripple/models/message_model.dart';
 import 'package:ripple/models/user_model.dart';
 
+import '../core/utils/helper.dart';
+
 class ChatProvider extends ChangeNotifier {
   final FirebaseService _firebaseService = FirebaseService();
   final TextEditingController messageInputController = TextEditingController();
-
+  final ScrollController _scrollController = ScrollController();
 
   //For ChatPreviewScreen: chatPreview list
   List<ChatPreviewModel> chatPreviews = [];
 
-
   //messages to show in current conversation
   List<MessageModel> messages = [];
 
-
   UserModel? receiverUser;
-  String?   currentChatId;
+  String? currentChatId;
+  DateTime? previousMessage;
+
+  ScrollController get scrollController => _scrollController;
 
   //Use this in Chat Screen to Receiver users live status
   var isReceiverUserOnline = false;
+  var isCalled = false;
 
-  //--Function to get receiver user online status
-  void getReceiverUserLiveStatus(String userId){
-
-    _firebaseService.getSingleUser(userId).listen((user){
-        isReceiverUserOnline = user.isOnline;
-        notifyListeners();
-
-    });
+  ChatProvider() {
+    scrollToBottom();
   }
 
+  StreamSubscription<List<MessageModel>>? _messageSubscription;
+  StreamSubscription<UserModel>? _liveStatusSubscription;
 
+  //--Function to get receiver user online status
+  void getReceiverUserLiveStatus(String userId) {
+   _liveStatusSubscription =  _firebaseService.getSingleUser(userId).listen((user) {
+      isReceiverUserOnline = user.isOnline;
+      notifyListeners();
+    }) ;
+  }
 
-
+  void scrollToBottom() {
+    // Check if the controller is safely attached to the widget
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent, // Target position
+        duration: const Duration(milliseconds: 100), // Speed
+        curve: Curves.linear, // Animation style
+      );
+    }
+  }
 
   //Fetches live chatPreview list
   void createChatPreviewsOnStart() async {
@@ -70,31 +88,85 @@ class ChatProvider extends ChangeNotifier {
     });
   }
 
-
   //Get messages for current chatId
   void getMessages(String chatId) async {
+    //bool doesChatExists =  await _firebaseService.doesChatExists(chatId);
 
-    // bool doesChatExists =  await _firebaseService.doesChatExists(chatId);
-    //
-    // if(doesChatExists){
-    //   _firebaseService.getMessageForCurrentConvo(chatId).listen((messageList){
-    //     messages = messageList;
-    //     notifyListeners();
-    //   });
-    // }
+
+      _messageSubscription =  _firebaseService.getMessageForCurrentConvo(chatId).listen((messageList) {
+          //messageList.sort((a,b)=> b.timestamp!.compareTo(a.timestamp!));
+          messages = messageList;
+          notifyListeners();
+          print("Messagelist:${messageList.length} ");
+          if (previousMessage != messageList.last.timestamp) {
+            scrollToBottom();
+            previousMessage = messageList.last.timestamp;
+          }
+          //_scrollToBottom();
+
+        });
+
+
 
   }
+
   //Sends message to chatId
-  Future<DocumentReference> addMessage(String chatId, MessageModel message) async {
+  Future<void> addMessage(String chatId, MessageModel message) async {
     print("Sending message: ");
-    return await _firebaseService.addMessage(chatId, message);
+    await _firebaseService.addMessage(chatId, message);
   }
 
-   @override
-  void dispose(){
+  Future<void> sendMessage({required UserModel? receiverUser}) async {
+    final text = messageInputController.text.trim();
+
+    currentChatId = Helper.generateChatId(
+      _firebaseService.userUid ?? '',
+      receiverUser?.uid ?? '',
+    );
+
+    if (text.isNotEmpty &&
+        (currentChatId != null && currentChatId!.isNotEmpty)) {
+      final receiver = receiverUser;
+      if (receiver == null) {
+        print('Receiver is null');
+        return;
+      }
+
+      final message = MessageModel(
+        messageId: '',
+        senderId: _firebaseService.userUid ?? '',
+        receiverId: receiver.uid,
+        message: text,
+        messageType: MessageType.text,
+      );
+      await _firebaseService.createChat(
+        ChatModel(
+          chatId: currentChatId ?? '',
+          participants: [message.senderId, message.receiverId],
+          lastMessage: message.message,
+        ),
+      );
+
+      await addMessage(currentChatId ?? '', message);
+
+      print('MessageId : sending');
+      // print('MessageId : ${id}');
+      messageInputController.clear();
+    } else {
+      print('MessageId : else  ${currentChatId}');
+      print('MessageId : else  ${text}');
+    }
+  }
+  void closeSubscriptions(){
+    _messageSubscription?.cancel();
+    _liveStatusSubscription?.cancel();
+  }
+
+  @override
+  void dispose() {
     messageInputController.dispose();
+    scrollController.dispose();
+    closeSubscriptions();
     super.dispose();
-
-
-   }
+  }
 }

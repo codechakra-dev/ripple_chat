@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:ripple/firebase/auth_service.dart';
 import 'package:ripple/models/chat_model.dart';
@@ -47,7 +49,18 @@ class FirebaseService {
   //--- GET ALL CHATS ---
 
   Stream<List<ChatModel>> getAllChats() {
-    return chatsReference.snapshots().map((snapshot) {
+    // Guard against null userUid
+    final uid = userUid;
+    if (uid == null || uid.isEmpty) {
+      // Return an empty stream or handle accordingly
+      return Stream.value([]);
+    }
+
+    return _firestore
+        .collection('chats')
+        .where('participants', arrayContains: uid) // 🔥 THE FIX
+        .snapshots()
+        .map((snapshot) {
       return snapshot.docs.map((doc) => ChatModel.fromFirestore(doc)).toList();
     });
   }
@@ -71,6 +84,7 @@ class FirebaseService {
         .collection("chats")
         .doc(chatId)
         .collection("messages")
+        .orderBy('timestamp', descending: false)
         .snapshots()
         .map((snapshot) {
           return snapshot.docs
@@ -85,15 +99,14 @@ class FirebaseService {
   }
 
   //--For sending a message
-  Future<DocumentReference> addMessage(
+  Future<void> addMessage(
     String chatId,
     MessageModel message,
   ) async {
     return await _firestore
         .collection("chats")
         .doc(chatId)
-        .collection("messages")
-        .add(message.toMapForSending());
+        .collection("messages").doc().set(message.toMapForSending());
   }
 
   Future<void> updateAMessage(

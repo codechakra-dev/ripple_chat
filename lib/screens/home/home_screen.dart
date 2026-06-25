@@ -6,6 +6,7 @@ import 'package:ripple/providers/chat_provider.dart';
 import 'package:ripple/screens/chat/chat_screen.dart';
 
 import '../../models/user_model.dart';
+import '../../providers/user_provider.dart';
 import '../chat/new_chat_screen.dart'; // your ChatScreen
 
 class ChatPreviewScreen extends StatelessWidget {
@@ -15,6 +16,7 @@ class ChatPreviewScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final chatProvider = context.watch<ChatProvider>();
+    chatProvider.createChatPreviewsOnStart();
     final previews = chatProvider.chatPreviews;
 
     return Scaffold(
@@ -165,16 +167,7 @@ class ChatPreviewScreen extends StatelessWidget {
         ],
       ),
       onTap: () {
-        // Navigate to the chat screen using the chatId and the other user
-        // Navigator.push(
-        //   context,
-        //   MaterialPageRoute(
-        //     builder: (_) => ChatScreen(
-        //       receiverUser: user,
-        //       chatId: preview.chatId,
-        //     ),
-        //   ),
-        // );
+        context.read<UserProvider>().startConversation(user, context, true);
       },
     );
   }

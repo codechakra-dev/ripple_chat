@@ -88,6 +88,7 @@ class ChatScreen extends StatelessWidget {
 
           },
         ),
+
       ),
       body: receiver == null
           ? const Center(child: Text('Conversation not found'))

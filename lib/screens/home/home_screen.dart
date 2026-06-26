@@ -1,6 +1,7 @@
 // screens/chat_preview_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:ripple/core/constants/app_strings.dart';
 import 'package:ripple/models/chat_preview_model.dart';
 import 'package:ripple/providers/chat_provider.dart';
 import 'package:ripple/screens/chat/chat_screen.dart';
@@ -8,17 +9,25 @@ import 'package:ripple/screens/chat/chat_screen.dart';
 import '../../models/user_model.dart';
 import '../../providers/user_provider.dart';
 import '../chat/new_chat_screen.dart'; // your ChatScreen
+enum MenuAction { profile, settings, logout }
 
 class ChatPreviewScreen extends StatelessWidget {
   const ChatPreviewScreen({super.key});
 
   @override
-  @override
   Widget build(BuildContext context) {
     final chatProvider = context.watch<ChatProvider>();
+    final userProvider = context.read<UserProvider>();
+    userProvider.appLifeCycleListener();
     chatProvider.createChatPreviewsOnStart();
     final previews = chatProvider.chatPreviews;
+    final displayPreview = previews.where((preview){
 
+      final name = preview.user.name.toLowerCase();
+      final email = preview.user.email.toLowerCase();
+      final query = chatProvider.searchTextController.text.trim().toLowerCase();
+    return name.contains(query) || email.contains(query);
+    }).toList();
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -28,34 +37,129 @@ class ChatPreviewScreen extends StatelessWidget {
         backgroundColor: Colors.white,
         elevation: 0.5,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {
-              // TODO: implement search
+
+          if(!chatProvider.showSearch)...[
+            IconButton(
+              icon: const Icon(Icons.search),
+              onPressed: () {
+                chatProvider.toggleShowSearch();
+                print("Search button pressed");
+              },
+            )
+          ],
+
+          PopupMenuButton<MenuAction>(
+            icon: const Icon(Icons.more_vert), // Three-dot menu icon
+            onSelected: (action) {
+              // Handle the tap
+              switch (action) {
+                case MenuAction.profile:
+                // Navigate to profile or show a dialog
+                //   ScaffoldMessenger.of(context).showSnackBar(
+                //     const SnackBar(content: Text('Profile tapped!')),
+                //   );
+
+                 Navigator.pushNamed(context, AppStrings.profileScreen);
+                  // Navigator.push(context, MaterialPageRoute(...));
+                  break;
+                case MenuAction.settings:
+                // Handle settings
+                  break;
+                case MenuAction.logout:
+                // Handle logout
+                  break;
+              }
             },
+            itemBuilder: (context) => [
+              // --- PROFILE BUTTON (Featured) ---
+              const PopupMenuItem<MenuAction>(
+                value: MenuAction.profile,
+                child: Row(
+                  children: [
+                    Icon(Icons.account_circle, color: Colors.blue),
+                    SizedBox(width: 12),
+                    Text('Profile'),
+                  ],
+                ),
+              ),
+              // --- Other menu items ---
+              // const PopupMenuItem<MenuAction>(
+              //   value: MenuAction.settings,
+              //   child: Row(
+              //     children: [
+              //       Icon(Icons.settings),
+              //       SizedBox(width: 12),
+              //       Text('Settings'),
+              //     ],
+              //   ),
+              // ),
+              const PopupMenuItem<MenuAction>(
+                value: MenuAction.logout,
+                child: Row(
+                  children: [
+                    Icon(Icons.logout, color: Colors.red),
+                    SizedBox(width: 12),
+                    Text('Logout'),
+                  ],
+                ),
+              ),
+            ],
           ),
+
         ],
+
+       bottom:  chatProvider.showSearch ?  PreferredSize(
+            preferredSize: const Size.fromHeight(56),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: TextField(
+                controller: context.read<ChatProvider>().searchTextController,
+                onChanged: (_){}, // rebuild on search
+                decoration: InputDecoration(
+                  hintText: 'Search users...',
+                  prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                  filled: true,
+                  fillColor: Colors.grey.shade100,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 8,
+                    horizontal: 16,
+                  ),
+                  suffixIcon: context.read<ChatProvider>().searchTextController.text.isNotEmpty
+                      ? IconButton(
+                    icon: const Icon(Icons.clear, size: 20),
+                    onPressed: () {
+                      context.read<ChatProvider>().searchTextController.text = "";
+                      context.read<ChatProvider>().toggleShowSearch();
+                    },
+                  )
+                      : null,
+                ),
+              ),
+            ),
+          ) : null
       ),
-      body: previews.isEmpty
+      body: displayPreview.isEmpty
           ? _buildEmptyState()
           : ListView.separated(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: previews.length,
-        separatorBuilder: (_, __) => const Divider(height: 1, indent: 72),
-        itemBuilder: (context, index) {
-          final preview = previews[index];
-          return _buildChatTile(context, preview);
-        },
-      ),
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: displayPreview.length,
+              separatorBuilder: (_, __) => const Divider(height: 1, indent: 72),
+              itemBuilder: (context, index) {
+                final preview = displayPreview[index];
+                return _buildChatTile(context, preview);
+              },
+            ),
       // ✅ NEW: Floating Action Button
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           // Navigate to New Chat Screen
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (_) => const NewChatScreen(),
-            ),
+            MaterialPageRoute(builder: (_) => const NewChatScreen()),
           );
         },
         backgroundColor: Colors.blue,
@@ -63,6 +167,7 @@ class ChatPreviewScreen extends StatelessWidget {
       ),
     );
   }
+
 
   // ---- Empty State ----
   Widget _buildEmptyState() {
@@ -87,10 +192,7 @@ class ChatPreviewScreen extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'Tap the + button to start a new chat',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade500,
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
           ),
         ],
       ),
@@ -129,17 +231,11 @@ class ChatPreviewScreen extends StatelessWidget {
       ),
       title: Text(
         _getDisplayName(user),
-        style: const TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 16,
-        ),
+        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
       ),
       subtitle: Text(
         preview.lastMessage,
-        style: TextStyle(
-          color: Colors.grey.shade600,
-          fontSize: 14,
-        ),
+        style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
@@ -149,10 +245,7 @@ class ChatPreviewScreen extends StatelessWidget {
         children: [
           Text(
             _formatTimeAgo(preview.lastMessageTime),
-            style: TextStyle(
-              color: Colors.grey.shade500,
-              fontSize: 12,
-            ),
+            style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
           ),
           const SizedBox(height: 4),
           // Optional: unread indicator (blue dot)

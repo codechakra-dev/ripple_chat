@@ -14,6 +14,7 @@ class ChatProvider extends ChangeNotifier {
   final FirebaseService _firebaseService = FirebaseService();
   final TextEditingController messageInputController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final TextEditingController _searchTextController = TextEditingController();
 
   //For ChatPreviewScreen: chatPreview list
   List<ChatPreviewModel> chatPreviews = [];
@@ -26,11 +27,12 @@ class ChatProvider extends ChangeNotifier {
   DateTime? previousMessage;
 
   ScrollController get scrollController => _scrollController;
+  TextEditingController get searchTextController => _searchTextController;
 
   //Use this in Chat Screen to Receiver users live status
   var isReceiverUserOnline = false;
   var isCalled = false;
-
+  var _showSearch = false;
   ChatProvider() {
     scrollToBottom();
   }
@@ -38,6 +40,18 @@ class ChatProvider extends ChangeNotifier {
   StreamSubscription<List<MessageModel>>? _messageSubscription;
   StreamSubscription<UserModel>? _liveStatusSubscription;
 
+
+  void toggleShowSearch(){
+    if(!_showSearch){
+      _showSearch = true;
+    }else{
+      _showSearch = false;
+    }
+    print("showSearch: ${_showSearch}");
+    notifyListeners();
+
+  }
+  bool get showSearch => _showSearch;
   //--Function to get receiver user online status
   void getReceiverUserLiveStatus(String userId) {
    _liveStatusSubscription =  _firebaseService.getSingleUser(userId).listen((user) {
@@ -166,6 +180,7 @@ class ChatProvider extends ChangeNotifier {
   void dispose() {
     messageInputController.dispose();
     scrollController.dispose();
+    searchTextController.dispose();
     closeSubscriptions();
     super.dispose();
   }

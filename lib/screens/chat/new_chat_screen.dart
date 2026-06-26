@@ -4,10 +4,6 @@ import 'package:provider/provider.dart';
 import 'package:ripple/models/user_model.dart';
 import 'package:ripple/providers/auth_provider.dart';
 import 'package:ripple/providers/user_provider.dart';
-import 'package:ripple/screens/chat/chat_screen.dart';
-import 'package:ripple/utils/helpers.dart';
-
-import '../../core/utils/helper.dart'; // contains generateChatId()
 
 class NewChatScreen extends StatefulWidget {
   const NewChatScreen({super.key});
@@ -27,8 +23,11 @@ class _NewChatScreenState extends State<NewChatScreen> {
     // Load users if not already loaded
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final userProvider = context.read<UserProvider>();
+      userProvider.appLifeCycleListener();
+
       if (userProvider.users.isEmpty) {
         userProvider.getAvailableUsers();
+
       }
     });
   }
@@ -41,17 +40,18 @@ class _NewChatScreenState extends State<NewChatScreen> {
     final allUsers = userProvider.users;
 
     // Filter out the current user
-    final otherUsers = allUsers.where((u) => u.uid != currentUser?.uid).toList();
-
+    final otherUsers = allUsers
+        .where((u) => u.uid != currentUser?.uid)
+        .toList();
     // Apply search filter
     final displayUsers = _searchController.text.isEmpty
         ? otherUsers
         : otherUsers.where((u) {
-      final name = u.name.toLowerCase();
-      final email = u.email.toLowerCase();
-      final query = _searchController.text.toLowerCase();
-      return name.contains(query) || email.contains(query);
-    }).toList();
+            final name = u.name.toLowerCase();
+            final email = u.email.toLowerCase();
+            final query = _searchController.text.toLowerCase();
+            return name.contains(query) || email.contains(query);
+          }).toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -82,15 +82,18 @@ class _NewChatScreenState extends State<NewChatScreen> {
                   borderRadius: BorderRadius.circular(30),
                   borderSide: BorderSide.none,
                 ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 8,
+                  horizontal: 16,
+                ),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
-                  icon: const Icon(Icons.clear, size: 20),
-                  onPressed: () {
-                    _searchController.clear();
-                    setState(() {});
-                  },
-                )
+                        icon: const Icon(Icons.clear, size: 20),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() {});
+                        },
+                      )
                     : null,
               ),
             ),
@@ -102,14 +105,14 @@ class _NewChatScreenState extends State<NewChatScreen> {
           : displayUsers.isEmpty
           ? _buildEmptyState()
           : ListView.separated(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: displayUsers.length,
-        separatorBuilder: (_, __) => const Divider(height: 1, indent: 72),
-        itemBuilder: (context, index) {
-          final user = displayUsers[index];
-          return _buildUserTile(context, user, currentUser?.uid ?? "");
-        },
-      ),
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: displayUsers.length,
+              separatorBuilder: (_, __) => const Divider(height: 1, indent: 72),
+              itemBuilder: (context, index) {
+                final user = displayUsers[index];
+                return _buildUserTile(context, user, currentUser?.uid ?? "");
+              },
+            ),
     );
   }
 
@@ -119,30 +122,20 @@ class _NewChatScreenState extends State<NewChatScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.person_search,
-            size: 80,
-            color: Colors.grey.shade400,
-          ),
+          Icon(Icons.person_search, size: 80, color: Colors.grey.shade400),
           const SizedBox(height: 16),
           Text(
             _searchController.text.isEmpty
                 ? 'No other users found'
                 : 'No results for "${_searchController.text}"',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey.shade600,
-            ),
+            style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
           ),
           const SizedBox(height: 8),
           Text(
             _searchController.text.isEmpty
                 ? 'Invite your friends to join!'
                 : 'Try a different search term',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade500,
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
           ),
         ],
       ),
@@ -150,7 +143,11 @@ class _NewChatScreenState extends State<NewChatScreen> {
   }
 
   // ---- User Tile ----
-  Widget _buildUserTile(BuildContext context, UserModel user, String currentUid) {
+  Widget _buildUserTile(
+    BuildContext context,
+    UserModel user,
+    String currentUid,
+  ) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       leading: Stack(
@@ -178,10 +175,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
       ),
       title: Text(
         user.name.isNotEmpty ? user.name : _getEmailPrefix(user.email),
-        style: const TextStyle(
-          fontWeight: FontWeight.w600,
-          fontSize: 16,
-        ),
+        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
       ),
       subtitle: Text(
         user.isOnline ? 'Online' : 'Offline',
@@ -190,14 +184,10 @@ class _NewChatScreenState extends State<NewChatScreen> {
           fontSize: 13,
         ),
       ),
-      trailing: const Icon(
-        Icons.chevron_right,
-        color: Colors.grey,
-      ),
+      trailing: const Icon(Icons.chevron_right, color: Colors.grey),
       onTap: () {
-          //Navigate to chat screen to start conversation
-          context.read<UserProvider>().startConversation(user, context,false);
-
+        //Navigate to chat screen to start conversation
+        context.read<UserProvider>().startConversation(user, context, false);
       },
     );
   }
@@ -220,7 +210,9 @@ class _NewChatScreenState extends State<NewChatScreen> {
   }
 
   Widget _buildInitials(UserModel user) {
-    final displayName = user.name.isNotEmpty ? user.name : _getEmailPrefix(user.email);
+    final displayName = user.name.isNotEmpty
+        ? user.name
+        : _getEmailPrefix(user.email);
     return Text(
       displayName.isNotEmpty ? displayName[0].toUpperCase() : '?',
       style: const TextStyle(

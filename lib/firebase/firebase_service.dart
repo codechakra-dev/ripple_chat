@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:ripple/firebase/auth_service.dart';
 import 'package:ripple/models/chat_model.dart';
 import 'package:ripple/models/message_model.dart';
@@ -22,9 +25,27 @@ class FirebaseService {
 
   //Chats collection reference
   CollectionReference get chatsReference => _firestore.collection("chats");
+  final Reference _storageRef = FirebaseStorage.instance
+      .ref()
+      .child("user_profile");
 
+  //--GET STORAGE REFERENCE
+  Reference get storageRef => _storageRef;
+
+  UploadTask uploadProfilePic(XFile file, String userId)  {
+    String fileExtension = file.name.split('.').last.toLowerCase();
+
+// Dynamically set the correct mime type string
+    String contentType = 'image/$fileExtension';
+    UploadTask uploadTask = storageRef.child(userId).putFile(
+      File(file.path),
+      SettableMetadata(contentType: contentType),
+    );
+    return uploadTask;
+  }
   // --- GET ALL USERS ---
   Stream<List<UserModel>> getAllUsers() {
+
     return usersRef.snapshots().map((snapshots) {
       return snapshots.docs.map((doc) {
         return UserModel.fromFirestore(doc);
@@ -95,6 +116,10 @@ class FirebaseService {
 
   //  Create user
   Future<void> createUser(UserModel user) async {
+    await usersRef.doc(user.uid).set(user.toMap());
+  }
+
+  Future<void> updateUser(UserModel user) async {
     await usersRef.doc(user.uid).set(user.toMap());
   }
 

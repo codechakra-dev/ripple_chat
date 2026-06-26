@@ -31,6 +31,7 @@ class AuthenticationProvider extends ChangeNotifier {
 
   //Call this method in splash screen
   void onInitialization() {
+
     // _firebaseUser = _authService.firebaseAuth.currentUser;
     _authService.firebaseAuth.authStateChanges().listen((user) {
       // _firebaseUser = user;
@@ -114,7 +115,7 @@ class AuthenticationProvider extends ChangeNotifier {
       //navigation is already handled in splash screen
       // user will automatically navigated to home after successful login
     } on FirebaseAuthException catch (e) {
-      String message = Autherrorhelper.authErrorMessage(e.code);
+      String message = AuthErrorHelper.authErrorMessage(e.code);
 
       if (context.mounted) {
         SnackBarHelper.showSnackBar(context, "Login Failed", message);
@@ -181,7 +182,7 @@ class AuthenticationProvider extends ChangeNotifier {
         );
       }
     } on FirebaseAuthException catch (e) {
-      String message = Autherrorhelper.authErrorMessage(e.code);
+      String message = AuthErrorHelper.authErrorMessage(e.code);
       if (context.mounted) {
         SnackBarHelper.showSnackBar(context, "Sign-up Failed", message);
       }
@@ -240,7 +241,7 @@ class AuthenticationProvider extends ChangeNotifier {
       isCodeSent = true;
       notifyListeners();
     } on FirebaseAuthException catch (e) {
-      String message = Autherrorhelper.authErrorMessage(e.code);
+      String message = AuthErrorHelper.authErrorMessage(e.code);
       if (context.mounted) {
         SnackBarHelper.showSnackBar(context, "Failed", message);
       }
@@ -295,7 +296,7 @@ class AuthenticationProvider extends ChangeNotifier {
         );
       }
     } on FirebaseAuthException catch (e) {
-      String message = Autherrorhelper.authErrorMessage(e.code);
+      String message = AuthErrorHelper.authErrorMessage(e.code);
       if (context.mounted) {
         SnackBarHelper.showSnackBar(context, "Failed", message);
       }

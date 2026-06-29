@@ -22,7 +22,7 @@ class CustomText extends StatelessWidget {
     return Text(
       text,
       style: TextStyle(
-        color: color,
+        color: color ,
         fontSize: fontSize,
         fontWeight: fontWeight,
         fontFamily: fontFamily ?? AppStrings.poppins,

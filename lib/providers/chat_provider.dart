@@ -24,7 +24,7 @@ class ChatProvider extends ChangeNotifier {
 
   UserModel? receiverUser;
   String? currentChatId;
-  DateTime? previousMessage;
+  DateTime? previousMessageTimeStamp;
 
   ScrollController get scrollController => _scrollController;
   TextEditingController get searchTextController => _searchTextController;
@@ -63,11 +63,12 @@ class ChatProvider extends ChangeNotifier {
   void scrollToBottom() {
     // Check if the controller is safely attached to the widget
     if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent, // Target position
-        duration: const Duration(milliseconds: 100), // Speed
-        curve: Curves.linear, // Animation style
-      );
+      _scrollController.jumpTo( _scrollController.position.maxScrollExtent);
+      // _scrollController.animateTo(
+      //   _scrollController.position.maxScrollExtent, // Target position
+      //   duration: const Duration(milliseconds: 10), // Speed
+      //   curve: Curves.linear, // Animation style
+      // );
     }
   }
 
@@ -111,10 +112,10 @@ class ChatProvider extends ChangeNotifier {
           //messageList.sort((a,b)=> b.timestamp!.compareTo(a.timestamp!));
           messages = messageList;
           notifyListeners();
-          print("Messagelist:${messageList.length} ");
-          if (previousMessage != messageList.last.timestamp) {
+
+          if (previousMessageTimeStamp != messageList.last.timestamp) {
             scrollToBottom();
-            previousMessage = messageList.last.timestamp;
+            previousMessageTimeStamp = messageList.last.timestamp;
           }
           //_scrollToBottom();
 

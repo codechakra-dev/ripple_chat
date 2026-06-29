@@ -59,7 +59,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
           'New Chat',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Colors.white,
+
         elevation: 0.5,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -72,7 +72,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: TextField(
               controller: _searchController,
-              onChanged: (_) => setState(() {}), // rebuild on search
+           //   onChanged: (_) => setState(() {}), // rebuild on search
               decoration: InputDecoration(
                 hintText: 'Search users...',
                 prefixIcon: const Icon(Icons.search, color: Colors.grey),

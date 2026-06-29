@@ -1,4 +1,3 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ripple/providers/auth_provider.dart';
@@ -138,15 +137,9 @@ class ProfileScreen extends StatelessWidget {
   //   Profile photo update – EMPTY PLACEHOLDER
   // ============================================================
   void _updateProfilePhoto(BuildContext context) {
-    // TODO: Implement photo selection & upload.
-    // For now, just show a message.
+
     context.read<UserProvider>().updateProfilePic(context);
-    // ScaffoldMessenger.of(context).showSnackBar(
-    //   const SnackBar(
-    //     content: Text('Photo upload not implemented yet.'),
-    //     duration: Duration(seconds: 2),
-    //   ),
-    // );
+
   }
 
   // ============================================================

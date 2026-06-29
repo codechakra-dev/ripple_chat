@@ -6,6 +6,7 @@ class UserModel {
   final String email;        // 👈 Non-nullable
   final String? photoUrl;    // 👈 Nullable (users might not have a photo)
   final bool isOnline;       // 👈 Non-nullable with default
+  final bool isTyping;
   final DateTime? lastSeen;  // 👈 DateTime, not String!
 
   UserModel({
@@ -14,6 +15,7 @@ class UserModel {
     required this.email,
     this.photoUrl,
     this.isOnline = false,   // Default to offline
+    this.isTyping = false,
     this.lastSeen,
   });
 
@@ -26,6 +28,7 @@ class UserModel {
       email: data['email'] ?? '',
       photoUrl: data['photoUrl'],
       isOnline: data['isOnline'] ?? false,
+      isTyping: data['isTyping'] ?? false,
       lastSeen: (data['lastSeen'] as Timestamp?)?.toDate(),
     );
   }
@@ -38,6 +41,7 @@ class UserModel {
       'email': email,
       'photoUrl': photoUrl,
       'isOnline': isOnline,
+      'isTyping': isTyping,
       'lastSeen': lastSeen != null
           ? Timestamp.fromDate(lastSeen!)
           : FieldValue.serverTimestamp(), // Use server time when creating
@@ -52,11 +56,18 @@ class UserModel {
     };
   }
 
+  Map<String, dynamic> toMapForTyping() {
+    return {
+      'isTyping': isTyping,
+    };
+  }
+
   // Helper: Create a copy with updated fields (great for state management)
   UserModel copyWith({
     String? name,
     String? photoUrl,
     bool? isOnline,
+    bool? isTyping,
     DateTime? lastSeen,
   }) {
     return UserModel(
@@ -65,6 +76,7 @@ class UserModel {
       email: email,
       photoUrl: photoUrl ?? this.photoUrl,
       isOnline: isOnline ?? this.isOnline,
+      isTyping: isTyping ?? this.isTyping ,
       lastSeen: lastSeen ?? this.lastSeen,
     );
   }

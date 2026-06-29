@@ -10,4 +10,8 @@ class AppStrings {
   static const homeScreen = "/home";
   static const profileScreen = "/profile";
   static const chatScreen = "/chat";
+  static const settingsScreen = "/settings";
+
+
+  static const themeModePrefs = "current_theme";
 }

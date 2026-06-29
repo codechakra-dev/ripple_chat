@@ -70,7 +70,7 @@ class ChatScreen extends StatelessWidget {
             ),
           ],
         ),
-        backgroundColor: Colors.white,
+
         elevation: 0.5,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -82,7 +82,7 @@ class ChatScreen extends StatelessWidget {
             FocusScope.of(context).unfocus();
             chatProvider.messageInputController.text = "";
             chatProvider.currentChatId = "";
-            chatProvider.previousMessage = null;
+            chatProvider.previousMessageTimeStamp = null;
             chatProvider.closeSubscriptions();
 
 
@@ -129,6 +129,7 @@ class ChatScreen extends StatelessWidget {
 
                           controller: chatProvider.scrollController,
                           reverse: false,
+                          shrinkWrap: true,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
                             vertical: 12,
@@ -195,87 +196,7 @@ class ChatScreen extends StatelessWidget {
     );
   }
 
-  // ---- Message Input ----
-  Widget _buildMessageInput(
-    BuildContext context,
-    String chatId,
-    String currentUserId,
-  ) {
-    final TextEditingController controller = context
-        .read<ChatProvider>()
-        .messageInputController;
 
-    void sendMessage() {
-      // await FirebaseFirestore.instance.collection('chats').doc('test43').set({
-      //   'test': true,
-      // });
-      final text = controller.text.trim();
-
-      if (text.isEmpty || chatId.isEmpty) return;
-      if (context.mounted) {
-        final chatProvider = context.read<ChatProvider>();
-        final receiver = chatProvider.receiverUser;
-        if (receiver == null) return;
-
-        final message = MessageModel(
-          messageId: '',
-          senderId: currentUserId,
-          receiverId: receiver.uid,
-          message: text,
-          messageType: MessageType.text,
-        );
-
-        chatProvider.addMessage(chatId, message);
-        print('MessageId : sending');
-        // print('MessageId : ${id}');
-        controller.clear();
-      }
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 6,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: controller,
-              decoration: InputDecoration(
-                hintText: 'Type a message...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide.none,
-                ),
-                filled: true,
-                fillColor: Colors.grey.shade100,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          CircleAvatar(
-            backgroundColor: Colors.blue,
-            child: IconButton(
-              icon: const Icon(Icons.send, color: Colors.white),
-              onPressed: sendMessage,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   // ---- Helpers (unchanged) ----
   Widget _buildAvatarContent(UserModel? user) {
@@ -337,7 +258,7 @@ class MessageInput extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        //color: Colors.white,
         boxShadow: [
           BoxShadow(
             color: Colors.grey.withOpacity(0.1),
@@ -358,7 +279,7 @@ class MessageInput extends StatelessWidget {
                   borderSide: BorderSide.none,
                 ),
                 filled: true,
-                fillColor: Colors.grey.shade100,
+              //  fillColor: Colors.grey.shade100,
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 8,

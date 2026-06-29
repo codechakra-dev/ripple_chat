@@ -167,4 +167,12 @@ class FirebaseService {
     UserModel userModel1 = userModel.copyWith(isOnline: isOnline);
     await currentUserRef.set(userModel1.toMap());
   }
+
+  //Update is typing status
+  Future<void> updateIsTypingStatus(bool isTyping) async {
+    DocumentSnapshot? doc = await currentUserRef.get();
+    UserModel userModel = UserModel.fromFirestore(doc);
+    UserModel userModel1 = userModel.copyWith(isTyping: isTyping);
+    await currentUserRef.set(userModel1.toMap());
+  }
 }

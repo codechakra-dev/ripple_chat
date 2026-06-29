@@ -9,6 +9,7 @@ import 'package:ripple/screens/chat/chat_screen.dart';
 import '../../models/user_model.dart';
 import '../../providers/user_provider.dart';
 import '../chat/new_chat_screen.dart'; // your ChatScreen
+
 enum MenuAction { profile, settings, logout }
 
 class ChatPreviewScreen extends StatelessWidget {
@@ -21,12 +22,11 @@ class ChatPreviewScreen extends StatelessWidget {
     userProvider.appLifeCycleListener();
     chatProvider.createChatPreviewsOnStart();
     final previews = chatProvider.chatPreviews;
-    final displayPreview = previews.where((preview){
-
+    final displayPreview = previews.where((preview) {
       final name = preview.user.name.toLowerCase();
       final email = preview.user.email.toLowerCase();
       final query = chatProvider.searchTextController.text.trim().toLowerCase();
-    return name.contains(query) || email.contains(query);
+      return name.contains(query) || email.contains(query);
     }).toList();
     return Scaffold(
       appBar: AppBar(
@@ -34,18 +34,17 @@ class ChatPreviewScreen extends StatelessWidget {
           'Messages',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Colors.white,
+
         elevation: 0.5,
         actions: [
-
-          if(!chatProvider.showSearch)...[
+          if (!chatProvider.showSearch) ...[
             IconButton(
               icon: const Icon(Icons.search),
               onPressed: () {
                 chatProvider.toggleShowSearch();
                 print("Search button pressed");
               },
-            )
+            ),
           ],
 
           PopupMenuButton<MenuAction>(
@@ -54,19 +53,20 @@ class ChatPreviewScreen extends StatelessWidget {
               // Handle the tap
               switch (action) {
                 case MenuAction.profile:
-                // Navigate to profile or show a dialog
-                //   ScaffoldMessenger.of(context).showSnackBar(
-                //     const SnackBar(content: Text('Profile tapped!')),
-                //   );
+                  // Navigate to profile or show a dialog
+                  //   ScaffoldMessenger.of(context).showSnackBar(
+                  //     const SnackBar(content: Text('Profile tapped!')),
+                  //   );
 
-                 Navigator.pushNamed(context, AppStrings.profileScreen);
+                  Navigator.pushNamed(context, AppStrings.profileScreen);
                   // Navigator.push(context, MaterialPageRoute(...));
                   break;
                 case MenuAction.settings:
-                // Handle settings
+                  // Handle settings
+                  Navigator.pushNamed(context, AppStrings.settingsScreen);
                   break;
                 case MenuAction.logout:
-                // Handle logout
+                  // Handle logout
                   break;
               }
             },
@@ -83,16 +83,16 @@ class ChatPreviewScreen extends StatelessWidget {
                 ),
               ),
               // --- Other menu items ---
-              // const PopupMenuItem<MenuAction>(
-              //   value: MenuAction.settings,
-              //   child: Row(
-              //     children: [
-              //       Icon(Icons.settings),
-              //       SizedBox(width: 12),
-              //       Text('Settings'),
-              //     ],
-              //   ),
-              // ),
+              const PopupMenuItem<MenuAction>(
+                value: MenuAction.settings,
+                child: Row(
+                  children: [
+                    Icon(Icons.settings),
+                    SizedBox(width: 12),
+                    Text('Settings'),
+                  ],
+                ),
+              ),
               const PopupMenuItem<MenuAction>(
                 value: MenuAction.logout,
                 child: Row(
@@ -105,42 +105,57 @@ class ChatPreviewScreen extends StatelessWidget {
               ),
             ],
           ),
-
         ],
 
-       bottom:  chatProvider.showSearch ?  PreferredSize(
-            preferredSize: const Size.fromHeight(56),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: TextField(
-                controller: context.read<ChatProvider>().searchTextController,
-                onChanged: (_){}, // rebuild on search
-                decoration: InputDecoration(
-                  hintText: 'Search users...',
-                  prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                  filled: true,
-                  fillColor: Colors.grey.shade100,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    vertical: 8,
+        bottom: chatProvider.showSearch
+            ? PreferredSize(
+                preferredSize: const Size.fromHeight(56),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
                     horizontal: 16,
+                    vertical: 8,
                   ),
-                  suffixIcon: context.read<ChatProvider>().searchTextController.text.isNotEmpty
-                      ? IconButton(
-                    icon: const Icon(Icons.clear, size: 20),
-                    onPressed: () {
-                      context.read<ChatProvider>().searchTextController.text = "";
-                      context.read<ChatProvider>().toggleShowSearch();
-                    },
-                  )
-                      : null,
+                  child: TextField(
+                    controller: context
+                        .read<ChatProvider>()
+                        .searchTextController,
+                    onChanged: (_) {}, // rebuild on search
+                    decoration: InputDecoration(
+                      hintText: 'Search users...',
+                      prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                      filled: true,
+                      fillColor: Colors.grey.shade100,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 8,
+                        horizontal: 16,
+                      ),
+                      suffixIcon:
+                          context
+                              .read<ChatProvider>()
+                              .searchTextController
+                              .text
+                              .isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 20),
+                              onPressed: () {
+                                context
+                                        .read<ChatProvider>()
+                                        .searchTextController
+                                        .text =
+                                    "";
+                                context.read<ChatProvider>().toggleShowSearch();
+                              },
+                            )
+                          : null,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          ) : null
+              )
+            : null,
       ),
       body: displayPreview.isEmpty
           ? _buildEmptyState()
@@ -167,7 +182,6 @@ class ChatPreviewScreen extends StatelessWidget {
       ),
     );
   }
-
 
   // ---- Empty State ----
   Widget _buildEmptyState() {

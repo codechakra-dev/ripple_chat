@@ -161,7 +161,7 @@ class ChatPreviewScreen extends StatelessWidget {
           ? _buildEmptyState()
           : ListView.separated(
               padding: const EdgeInsets.symmetric(vertical: 8),
-              itemCount: displayPreview.length,
+              itemCount: displayPreview.length ,
               separatorBuilder: (_, __) => const Divider(height: 1, indent: 72),
               itemBuilder: (context, index) {
                 final preview = displayPreview[index];

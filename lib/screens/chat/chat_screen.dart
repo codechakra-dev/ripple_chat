@@ -7,6 +7,8 @@ import 'package:ripple/models/user_model.dart';
 import 'package:ripple/providers/auth_provider.dart';
 import 'package:ripple/providers/chat_provider.dart';
 import 'package:ripple/providers/user_provider.dart';
+import 'package:flutter/services.dart';
+import 'package:ripple/widgets/typing_bubble.dart';
 
 class ChatScreen extends StatelessWidget {
   const ChatScreen({super.key});
@@ -25,18 +27,19 @@ class ChatScreen extends StatelessWidget {
     final currentUserId = authProvider.currentUser?.uid ?? '';
 
     // 2️⃣ Load messages & status (only once per chatId change)
-    // WidgetsBinding.instance.addPostFrameCallback((_) {
-    //
-    // });
-    if (chatId.isNotEmpty) {
-      // Only load if messages are empty OR the chatId changed (optional safety)
-      // Our getMessages method cancels previous subscription anyway.
-      // print("Initial ChatId : $chatId");
-      chatProvider.getMessages(chatId);
-    }
-    if (receiver != null && receiver.uid.isNotEmpty) {
-      chatProvider.getReceiverUserLiveStatus(receiver.uid);
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (chatId.isNotEmpty) {
+        // Only load if messages are empty OR the chatId changed (optional safety)
+        // Our getMessages method cancels previous subscription anyway.
+        // print("Initial ChatId : $chatId");
+        chatProvider.getMessages(chatId);
+      }
+      if (receiver != null && receiver.uid.isNotEmpty) {
+        chatProvider.getReceiverUserLiveStatus(receiver.uid);
+      }
+
+      chatProvider.onInit();
+    });
 
     // 3️⃣ Build UI
     return Scaffold(
@@ -74,129 +77,94 @@ class ChatScreen extends StatelessWidget {
         elevation: 0.5,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: (){
-
+          onPressed: () {
             Navigator.pop(context);
-            // 1. Force the keyboard to close by removing focus
-            FocusManager.instance.primaryFocus?.unfocus();
-            FocusScope.of(context).unfocus();
+
+            //Hides keyboard
+            SystemChannels.textInput.invokeMethod('TextInput.hide');
             chatProvider.messageInputController.text = "";
             chatProvider.currentChatId = "";
             chatProvider.previousMessageTimeStamp = null;
             chatProvider.closeSubscriptions();
-
-
           },
         ),
-
       ),
       body: receiver == null
           ? const Center(child: Text('Conversation not found'))
           : Column(
-              children: [
-                // Messages list
-                Expanded(
-                  child: messages.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.chat_bubble_outline,
-                                size: 60,
-                                color: Colors.grey.shade400,
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                'No messages yet',
-                                style: TextStyle(
-                                  color: Colors.grey.shade500,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Say hello to ${_getDisplayName(receiver)}',
-                                style: TextStyle(
-                                  color: Colors.grey.shade400,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      : ListView.builder(
+        children: [
+          // Messages list
+          Expanded(
+            child: messages.isEmpty
+                ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.chat_bubble_outline,
+                    size: 60,
+                    color: Colors.grey.shade400,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'No messages yet',
+                    style: TextStyle(
+                      color: Colors.grey.shade500,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Say hello to ${_getDisplayName(receiver)}',
+                    style: TextStyle(
+                      color: Colors.grey.shade400,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            )
+                : ListView.builder(
+              controller: chatProvider.scrollController,
+              reverse: false,
+              shrinkWrap: true,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 12,
+              ),
+              itemCount: messages.length + 1,
+              itemBuilder: (context, index) {
+                if (index < messages.length) {
+                  final message = messages[index];
 
-                          controller: chatProvider.scrollController,
-                          reverse: false,
-                          shrinkWrap: true,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 12,
-                          ),
-                          itemCount: messages.length,
-                          itemBuilder: (context, index) {
-                            final message = messages[index];
-
-                            final isMe = message.senderId == currentUserId;
-                            return _buildMessageBubble(message, isMe);
-                          },
-                        ),
-                ),
-                // Input field
-                const SizedBox(height: 10,),
-                const MessageInput(),
-                //_buildMessageInput(context, chatId, currentUserId),
-              ],
+                  final isMe = message.senderId == currentUserId;
+                  return MessageBubble(isMe: isMe, message: message);
+                } else {
+                  if (chatProvider.isReceiverUserTyping) {
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [TypingBubble()],
+                    );
+                  }
+                }
+              },
             ),
-    );
-  }
-
-  // ---- Message Bubble ----
-  Widget _buildMessageBubble(MessageModel message, bool isMe) {
-    return Align(
-      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: isMe ? Colors.blue : Colors.grey.shade300,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: isMe
-                ? const Radius.circular(16)
-                : const Radius.circular(4),
-            bottomRight: isMe
-                ? const Radius.circular(4)
-                : const Radius.circular(16),
           ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              message.message,
-              style: TextStyle(
-                color: isMe ? Colors.white : Colors.black87,
-                fontSize: 16,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              _formatTime(message.timestamp),
-              style: TextStyle(
-                color: isMe ? Colors.white70 : Colors.black54,
-                fontSize: 10,
-              ),
-            ),
-          ],
-        ),
+          // Input field
+          const SizedBox(height: 10),
+          const MessageInput(),
+          //_buildMessageInput(context, chatId, currentUserId),
+        ],
       ),
     );
   }
 
+  // ---- Message Bubble ----
 
+
+  Widget _buildMessageBubble(MessageModel message, bool isMe) {
+    return Placeholder();
+  }
 
   // ---- Helpers (unchanged) ----
   Widget _buildAvatarContent(UserModel? user) {
@@ -237,6 +205,16 @@ class ChatScreen extends StatelessWidget {
     return 'User';
   }
 
+
+}
+
+
+class MessageBubble extends StatelessWidget {
+  final bool isMe;
+  final MessageModel message;
+
+   MessageBubble({required this.isMe, required this.message, super.key});
+
   String _formatTime(DateTime? dateTime) {
     if (dateTime == null) return '';
     final now = DateTime.now();
@@ -244,8 +222,129 @@ class ChatScreen extends StatelessWidget {
     if (diff.inDays > 0) {
       return '${dateTime.day}/${dateTime.month}';
     } else {
-      return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+      return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute
+          .toString().padLeft(2, '0')}';
     }
+  }
+
+  Offset? _tapPosition = Offset.zero;
+
+  // 2. Your helper method to update it
+  void _getTapPosition(TapDownDetails details) {
+    _tapPosition = details.globalPosition;
+  }
+
+
+  void _showContextMenu(BuildContext context) async {
+    final RenderBox overlay = Overlay
+        .of(context)
+        .context
+        .findRenderObject() as RenderBox;
+
+    // Open the popup precisely at the finger tap location
+    final String? selectedAction = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromRect(
+        Rect.fromLTWH(_tapPosition?.dx ?? 0, _tapPosition?.dy ?? 0, 40, 40),
+        // Tap location bounding box
+        Offset.zero & overlay.size, // Screen dimensions
+      ),
+      items: [
+        const PopupMenuItem<String>(
+          value: 'copy',
+          child: Row(
+            children: [
+              Icon(Icons.copy, size: 20),
+              SizedBox(width: 10),
+              Text('Copy Text'),
+            ],
+          ),
+        ),
+        const PopupMenuItem<String>(
+          value: 'delete',
+          child: Row(
+            children: [
+              Icon(Icons.delete, color: Colors.red, size: 20),
+              SizedBox(width: 10),
+              Text('Delete for everyone', style: TextStyle(color: Colors.red)),
+            ],
+          ),
+        ),
+      ],
+    );
+
+    // Handle the selected action
+    if (selectedAction == 'delete') {
+      _confirmDelete(context);
+    } else if (selectedAction == 'copy') {
+      // Handle your text copy logic here
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Copied to clipboard')),
+        );
+      }
+    }
+  }
+
+  void _confirmDelete(BuildContext context) {
+    context.read<ChatProvider>().deleteMessage(context, message, context.read<UserProvider>().receiverUser);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onDoubleTapDown: _getTapPosition,
+      onLongPress: () {
+        _showContextMenu(context);
+      },
+      child: Align(
+        alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: isMe ? Colors.blue : Colors.grey.shade300,
+            borderRadius: BorderRadius.only(
+              topLeft: const Radius.circular(16),
+              topRight: const Radius.circular(16),
+              bottomLeft: isMe
+                  ? const Radius.circular(16)
+                  : const Radius.circular(4),
+              bottomRight: isMe
+                  ? const Radius.circular(4)
+                  : const Radius.circular(16),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+
+              if(message.messageType == MessageType.image)...[
+                Image.network(message.message),
+              ] else
+                ...[
+                  Text(
+                    message.message,
+                    style: TextStyle(
+                      color: isMe ? Colors.white : Colors.black87,
+                      fontSize: 16,
+                    ),
+                  )
+                ]
+              ,
+              const SizedBox(height: 4),
+              Text(
+                _formatTime(message.timestamp),
+                style: TextStyle(
+                  color: isMe ? Colors.white70 : Colors.black54,
+                  fontSize: 10,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -254,7 +353,9 @@ class MessageInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = context.read<ChatProvider>().messageInputController;
+    final controller = context
+        .read<ChatProvider>()
+        .messageInputController;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -272,14 +373,26 @@ class MessageInput extends StatelessWidget {
           Expanded(
             child: TextField(
               controller: controller,
+
               decoration: InputDecoration(
                 hintText: 'Type a message...',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(30),
                   borderSide: BorderSide.none,
                 ),
+                suffixIcon: IconButton(
+                  onPressed: () {
+                    context.read<ChatProvider>().sendPhoto(
+                      context,
+                      receiverUser: context
+                          .read<UserProvider>()
+                          .receiverUser,
+                    );
+                  },
+                  icon: Icon(Icons.add_photo_alternate_outlined),
+                ),
                 filled: true,
-              //  fillColor: Colors.grey.shade100,
+                //  fillColor: Colors.grey.shade100,
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 8,
@@ -290,11 +403,22 @@ class MessageInput extends StatelessWidget {
           const SizedBox(width: 8),
           CircleAvatar(
             backgroundColor: Colors.blue,
-            child: IconButton(
+            child: context
+                .watch<ChatProvider>()
+                .isMessageBeingSent
+                ? SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(),
+            )
+                : IconButton(
               icon: const Icon(Icons.send, color: Colors.white),
               onPressed: () {
                 context.read<ChatProvider>().sendMessage(
-                  receiverUser: context.read<UserProvider>().receiverUser,
+                  context,
+                  receiverUser: context
+                      .read<UserProvider>()
+                      .receiverUser,
                 );
               },
             ),

@@ -75,6 +75,9 @@ class UserProvider extends ChangeNotifier {
 
         });
   }
+
+
+
   Future<String?> updateProfilePic(BuildContext context) async {
     try{
       final ImagePicker _picker = ImagePicker();
@@ -84,7 +87,7 @@ class UserProvider extends ChangeNotifier {
       );
 
       if (pickedFile == null) return null;
-      UploadTask uploadTask = _firebaseService.uploadProfilePic(pickedFile, currentUser?.uid ?? '');
+      UploadTask uploadTask = _firebaseService.uploadProfilePhoto(pickedFile, currentUser?.uid ?? '');
 
 
       uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {

@@ -32,7 +32,7 @@ class FirebaseService {
   //--GET STORAGE REFERENCE
   Reference get storageRef => _storageRef;
 
-  UploadTask uploadProfilePic(XFile file, String userId)  {
+  UploadTask uploadProfilePhoto(XFile file, String userId)  {
     String fileExtension = file.name.split('.').last.toLowerCase();
 
 // Dynamically set the correct mime type string
@@ -43,6 +43,20 @@ class FirebaseService {
     );
     return uploadTask;
   }
+
+  UploadTask uploadPhoto(XFile file, String chatId){
+    String fileExtension = file.name.split('.').last.toLowerCase();
+
+// Dynamically set the correct mime type string
+    String contentType = 'image/$fileExtension';
+    UploadTask uploadTask = storageRef.child(chatId).child(DateTime.now().millisecondsSinceEpoch.toString()).putFile(
+      File(file.path),
+      SettableMetadata(contentType: contentType),
+    );
+    return uploadTask;
+  }
+
+
   // --- GET ALL USERS ---
   Stream<List<UserModel>> getAllUsers() {
 

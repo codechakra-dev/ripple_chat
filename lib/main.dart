@@ -1,4 +1,6 @@
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ripple/core/services/shared_prefs.dart';
@@ -25,6 +27,12 @@ void main() async {
 
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await FirebaseAppCheck.instance.activate(
+    // Uses Debug provider for emulators/local tests, Play Integrity for live users
+    providerAndroid: kDebugMode ? const AndroidDebugProvider() :const AndroidPlayIntegrityProvider(),
+    providerApple: kDebugMode ? const AppleDebugProvider() : const AppleDeviceCheckProvider(),
+    providerWeb: ReCaptchaV3Provider('your-recaptcha-v3-site-key'),
+  );
 
   runApp(
     MultiProvider(

@@ -2,12 +2,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:ripple/core/utils/snackbar_helper.dart';
 import 'package:ripple/models/message_model.dart';
 import 'package:ripple/models/user_model.dart';
 import 'package:ripple/providers/auth_provider.dart';
 import 'package:ripple/providers/chat_provider.dart';
 import 'package:ripple/providers/user_provider.dart';
 import 'package:flutter/services.dart';
+import 'package:ripple/widgets/audio_input.dart';
 import 'package:ripple/widgets/typing_bubble.dart';
 
 class ChatScreen extends StatelessWidget {
@@ -40,6 +42,7 @@ class ChatScreen extends StatelessWidget {
 
       chatProvider.onInit();
     });
+    print("Input type = ${chatProvider.inputType}");
 
     // 3️⃣ Build UI
     return Scaffold(
@@ -92,79 +95,123 @@ class ChatScreen extends StatelessWidget {
       body: receiver == null
           ? const Center(child: Text('Conversation not found'))
           : Column(
-        children: [
-          // Messages list
-          Expanded(
-            child: messages.isEmpty
-                ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.chat_bubble_outline,
-                    size: 60,
-                    color: Colors.grey.shade400,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'No messages yet',
-                    style: TextStyle(
-                      color: Colors.grey.shade500,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Say hello to ${_getDisplayName(receiver)}',
-                    style: TextStyle(
-                      color: Colors.grey.shade400,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            )
-                : ListView.builder(
-              controller: chatProvider.scrollController,
-              reverse: false,
-              shrinkWrap: true,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 8,
-                vertical: 12,
-              ),
-              itemCount: messages.length + 1,
-              itemBuilder: (context, index) {
-                if (index < messages.length) {
-                  final message = messages[index];
+              children: [
+                Expanded(
+                  child: Column(
+                    children: [
+                      // Messages list
+                      Expanded(
+                        child: messages.isEmpty
+                            ? Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.chat_bubble_outline,
+                                      size: 60,
+                                      color: Colors.grey.shade400,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      'No messages yet',
+                                      style: TextStyle(
+                                        color: Colors.grey.shade500,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Say hello to ${_getDisplayName(receiver)}',
+                                      style: TextStyle(
+                                        color: Colors.grey.shade400,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : ListView.builder(
+                                controller: chatProvider.scrollController,
+                                reverse: false,
+                                shrinkWrap: true,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 12,
+                                ),
+                                itemCount: messages.length + 1,
+                                itemBuilder: (context, index) {
+                                  if (index < messages.length) {
+                                    final message = messages[index];
 
-                  final isMe = message.senderId == currentUserId;
-                  return MessageBubble(isMe: isMe, message: message);
-                } else {
-                  if (chatProvider.isReceiverUserTyping) {
-                    return Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [TypingBubble()],
-                    );
-                  }
-                }
-              },
+                                    final isMe =
+                                        message.senderId == currentUserId;
+                                    return MessageBubble(
+                                      isMe: isMe,
+                                      message: message,
+                                    );
+                                  } else {
+                                    if (chatProvider.isReceiverUserTyping) {
+                                      return Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.start,
+                                        children: [TypingBubble()],
+                                      );
+                                    }
+                                    return null;
+                                  }
+                                },
+                              ),
+                      ),
+                      // Input field
+                      const SizedBox(height: 10),
+
+                      Row(
+                        children: [
+                          if (chatProvider.inputType == "message") ...[
+                            Expanded(child: const MessageInput()),
+                          ] else ...[
+                            Expanded(child: const AudioInput()),
+                          ],
+                          IconButton(
+                            onPressed: () async {
+                              if (chatProvider.inputType == "audio") {
+                                if (chatProvider.isRecordingFinished) {
+                                  //send audio
+                                    String message = await chatProvider.sendVoiceMessage();
+                                  if(context.mounted){
+                                    if(message.contains("error"))
+                                    {
+                                      SnackBarHelper.showSnackBar(context, "Error", message);
+                                    }else{
+                                      SnackBarHelper.showSnackBar(context, "Success", message);
+                                    }
+                                  }
+                                }
+                              } else {
+                                chatProvider.inputType = "audio";
+                              }
+                            },
+                            icon: Icon(
+                              chatProvider.isRecording
+                                  ? Icons.record_voice_over
+                                  : chatProvider.isRecordingFinished
+                                  ? Icons.send
+                                  : Icons.mic_outlined,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      //_buildMessageInput(context, chatId, currentUserId),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ),
-          // Input field
-          const SizedBox(height: 10),
-          const MessageInput(),
-          //_buildMessageInput(context, chatId, currentUserId),
-        ],
-      ),
     );
   }
 
   // ---- Message Bubble ----
-
-
-  Widget _buildMessageBubble(MessageModel message, bool isMe) {
-    return Placeholder();
-  }
 
   // ---- Helpers (unchanged) ----
   Widget _buildAvatarContent(UserModel? user) {
@@ -204,16 +251,13 @@ class ChatScreen extends StatelessWidget {
     }
     return 'User';
   }
-
-
 }
-
 
 class MessageBubble extends StatelessWidget {
   final bool isMe;
   final MessageModel message;
 
-   MessageBubble({required this.isMe, required this.message, super.key});
+  MessageBubble({required this.isMe, required this.message, super.key});
 
   String _formatTime(DateTime? dateTime) {
     if (dateTime == null) return '';
@@ -222,8 +266,7 @@ class MessageBubble extends StatelessWidget {
     if (diff.inDays > 0) {
       return '${dateTime.day}/${dateTime.month}';
     } else {
-      return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute
-          .toString().padLeft(2, '0')}';
+      return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
     }
   }
 
@@ -232,14 +275,12 @@ class MessageBubble extends StatelessWidget {
   // 2. Your helper method to update it
   void _getTapPosition(TapDownDetails details) {
     _tapPosition = details.globalPosition;
+    print("on tap down: dx ${_tapPosition?.dx} dy: ${_tapPosition?.dy}");
   }
 
-
   void _showContextMenu(BuildContext context) async {
-    final RenderBox overlay = Overlay
-        .of(context)
-        .context
-        .findRenderObject() as RenderBox;
+    final RenderBox overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox;
 
     // Open the popup precisely at the finger tap location
     final String? selectedAction = await showMenu<String>(
@@ -274,26 +315,30 @@ class MessageBubble extends StatelessWidget {
     );
 
     // Handle the selected action
-    if (selectedAction == 'delete') {
+    if (selectedAction == 'delete' && context.mounted) {
       _confirmDelete(context);
     } else if (selectedAction == 'copy') {
       // Handle your text copy logic here
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Copied to clipboard')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Copied to clipboard')));
       }
     }
   }
 
   void _confirmDelete(BuildContext context) {
-    context.read<ChatProvider>().deleteMessage(context, message, context.read<UserProvider>().receiverUser);
+    context.read<ChatProvider>().deleteMessage(
+      context,
+      message,
+      context.read<UserProvider>().receiverUser,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onDoubleTapDown: _getTapPosition,
+      onTapDown: _getTapPosition,
       onLongPress: () {
         _showContextMenu(context);
       },
@@ -318,20 +363,21 @@ class MessageBubble extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-
-              if(message.messageType == MessageType.image)...[
+              if (message.messageType == MessageType.image) ...[
                 Image.network(message.message),
-              ] else
-                ...[
-                  Text(
-                    message.message,
-                    style: TextStyle(
-                      color: isMe ? Colors.white : Colors.black87,
-                      fontSize: 16,
-                    ),
-                  )
-                ]
-              ,
+              ]else if(message.messageType == MessageType.voice)...[
+
+                Text("Implement AudioPlayer")
+              ]
+              else ...[
+                Text(
+                  message.message,
+                  style: TextStyle(
+                    color: isMe ? Colors.white : Colors.black87,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
               const SizedBox(height: 4),
               Text(
                 _formatTime(message.timestamp),
@@ -353,9 +399,7 @@ class MessageInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = context
-        .read<ChatProvider>()
-        .messageInputController;
+    final controller = context.read<ChatProvider>().messageInputController;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -384,9 +428,7 @@ class MessageInput extends StatelessWidget {
                   onPressed: () {
                     context.read<ChatProvider>().sendPhoto(
                       context,
-                      receiverUser: context
-                          .read<UserProvider>()
-                          .receiverUser,
+                      receiverUser: context.read<UserProvider>().receiverUser,
                     );
                   },
                   icon: Icon(Icons.add_photo_alternate_outlined),
@@ -403,25 +445,21 @@ class MessageInput extends StatelessWidget {
           const SizedBox(width: 8),
           CircleAvatar(
             backgroundColor: Colors.blue,
-            child: context
-                .watch<ChatProvider>()
-                .isMessageBeingSent
+            child: context.watch<ChatProvider>().isMessageBeingSent
                 ? SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(),
-            )
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(),
+                  )
                 : IconButton(
-              icon: const Icon(Icons.send, color: Colors.white),
-              onPressed: () {
-                context.read<ChatProvider>().sendMessage(
-                  context,
-                  receiverUser: context
-                      .read<UserProvider>()
-                      .receiverUser,
-                );
-              },
-            ),
+                    icon: const Icon(Icons.send, color: Colors.white),
+                    onPressed: () {
+                      context.read<ChatProvider>().sendMessage(
+                        context,
+                        receiverUser: context.read<UserProvider>().receiverUser,
+                      );
+                    },
+                  ),
           ),
         ],
       ),

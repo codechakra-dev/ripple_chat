@@ -25,41 +25,48 @@ class FirebaseService {
 
   //Chats collection reference
   CollectionReference get chatsReference => _firestore.collection("chats");
-  final Reference _storageRef = FirebaseStorage.instance
-      .ref()
-      .child("user_profile");
+  final Reference _storageRef = FirebaseStorage.instance.ref().child(
+    "user_profile",
+  );
 
   //--GET STORAGE REFERENCE
   Reference get storageRef => _storageRef;
 
-  UploadTask uploadProfilePhoto(XFile file, String userId)  {
+  UploadTask uploadProfilePhoto(XFile file, String userId) {
     String fileExtension = file.name.split('.').last.toLowerCase();
 
-// Dynamically set the correct mime type string
+    // Dynamically set the correct mime type string
     String contentType = 'image/$fileExtension';
-    UploadTask uploadTask = storageRef.child(userId).putFile(
-      File(file.path),
-      SettableMetadata(contentType: contentType),
-    );
+    UploadTask uploadTask = storageRef
+        .child(userId)
+        .putFile(File(file.path), SettableMetadata(contentType: contentType));
     return uploadTask;
   }
 
-  UploadTask uploadPhoto(XFile file, String chatId){
+  UploadTask uploadPhoto(XFile file, String chatId) {
     String fileExtension = file.name.split('.').last.toLowerCase();
 
-// Dynamically set the correct mime type string
+    // Dynamically set the correct mime type string
     String contentType = 'image/$fileExtension';
-    UploadTask uploadTask = storageRef.child(chatId).child(DateTime.now().millisecondsSinceEpoch.toString()).putFile(
-      File(file.path),
-      SettableMetadata(contentType: contentType),
-    );
+    UploadTask uploadTask = storageRef
+        .child(chatId)
+        .child(DateTime.now().millisecondsSinceEpoch.toString())
+        .putFile(File(file.path), SettableMetadata(contentType: contentType));
     return uploadTask;
   }
 
+  UploadTask uploadAudio(File file, String chatId) {
+
+    String contentType = 'audio/m4a';
+    UploadTask uploadTask = storageRef
+        .child(chatId)
+        .child(DateTime.now().millisecondsSinceEpoch.toString())
+        .putFile(File(file.path), SettableMetadata(contentType: contentType));
+    return uploadTask;
+  }
 
   // --- GET ALL USERS ---
   Stream<List<UserModel>> getAllUsers() {
-
     return usersRef.snapshots().map((snapshots) {
       return snapshots.docs.map((doc) {
         return UserModel.fromFirestore(doc);
@@ -96,21 +103,24 @@ class FirebaseService {
         .where('participants', arrayContains: uid) // 🔥 THE FIX
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) => ChatModel.fromFirestore(doc)).toList();
-    });
+          return snapshot.docs
+              .map((doc) => ChatModel.fromFirestore(doc))
+              .toList();
+        });
   }
 
-
-
   //--- GET SINGLE CHAT
-  Stream<ChatModel> getSingleChat(String chatId){
-    return chatsReference.doc(chatId).snapshots().map((doc)=> ChatModel.fromFirestore(doc));
+  Stream<ChatModel> getSingleChat(String chatId) {
+    return chatsReference
+        .doc(chatId)
+        .snapshots()
+        .map((doc) => ChatModel.fromFirestore(doc));
   }
 
   //-- GET MESSAGES FOR SINGLE CONVERSATION ONLY FOR CURRENT USER USING CHAT ID ---
 
   Future<bool> doesChatExists(String chatId) async {
-    var docRef = await  _firestore.collection("chats").doc(chatId).get();
+    var docRef = await _firestore.collection("chats").doc(chatId).get();
     return docRef.exists;
   }
 
@@ -138,14 +148,13 @@ class FirebaseService {
   }
 
   //--For sending a message
-  Future<void> addMessage(
-    String chatId,
-    MessageModel message,
-  ) async {
+  Future<void> addMessage(String chatId, MessageModel message) async {
     return await _firestore
         .collection("chats")
         .doc(chatId)
-        .collection("messages").doc().set(message.toMapForSending());
+        .collection("messages")
+        .doc()
+        .set(message.toMapForSending());
   }
 
   Future<void> updateAMessage(

@@ -10,6 +10,7 @@ import 'package:ripple/providers/chat_provider.dart';
 import 'package:ripple/providers/user_provider.dart';
 import 'package:flutter/services.dart';
 import 'package:ripple/widgets/audio_input.dart';
+import 'package:ripple/widgets/audio_player_widget.dart';
 import 'package:ripple/widgets/typing_bubble.dart';
 
 class ChatScreen extends StatelessWidget {
@@ -367,7 +368,7 @@ class MessageBubble extends StatelessWidget {
                 Image.network(message.message),
               ]else if(message.messageType == MessageType.voice)...[
 
-                Text("Implement AudioPlayer")
+                AudioPlayerWidget(url: message.message),
               ]
               else ...[
                 Text(

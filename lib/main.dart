@@ -1,5 +1,6 @@
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -18,10 +19,19 @@ import 'package:ripple/screens/settings/settings_screen.dart';
 import 'package:ripple/screens/splash/splash_screen.dart';
 
 import 'core/constants/app_strings.dart';
+import 'core/services/notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'firebase_options.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  print('Background message: ${message.notification?.title}');
+}
+
 
 void main() async {
 
@@ -33,7 +43,10 @@ void main() async {
     providerApple: kDebugMode ? const AppleDebugProvider() : const AppleDeviceCheckProvider(),
     providerWeb: ReCaptchaV3Provider('your-recaptcha-v3-site-key'),
   );
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
+  final NotificationService notificationService = NotificationService();
+  await notificationService.initialize();
   runApp(
     MultiProvider(
       providers: [

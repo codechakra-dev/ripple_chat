@@ -62,7 +62,7 @@ class ChatScreen extends StatelessWidget {
         chatProvider.closeSubscriptions();
       },
       child: Scaffold(
-        resizeToAvoidBottomInset: false,
+        resizeToAvoidBottomInset: true,
 
         appBar: AppBar(
           title: GestureDetector(

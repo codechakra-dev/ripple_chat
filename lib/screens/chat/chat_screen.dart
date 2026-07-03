@@ -116,120 +116,130 @@ class ChatScreen extends StatelessWidget {
             },
           ),
         ),
-        body: receiver == null
-            ? const Center(child: Text('Conversation not found'))
-            : Column(
-          children: [
-            // Messages list
-            messages.isEmpty
-                ? Center(
-              child: Column(
-                mainAxisAlignment:
-                MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.chat_bubble_outline,
-                    size: 60,
-                    color: Colors.grey.shade400,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'No messages yet',
-                    style: TextStyle(
-                      color: Colors.grey.shade500,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Say hello to ${_getDisplayName(receiver)}',
-                    style: TextStyle(
-                      color: Colors.grey.shade400,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            )
-                : Expanded(child: ListView.builder(
-              controller:
-              chatProvider.scrollController,
-              //   reverse: false,
-              shrinkWrap: true,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 8,
-                vertical: 12,
-              ),
-              itemCount: messages.length + 1,
-              itemBuilder: (context, index) {
-                if (index < messages.length) {
-                  final message = messages[index];
-
-                  final isMe =
-                      message.senderId ==
-                          currentUserId;
-                  return MessageBubble(
-                    isMe: isMe,
-                    message: message,
-                  );
-                } else {
-                  if (chatProvider
-                      .isReceiverUserTyping) {
-                    return Row(
-                      mainAxisAlignment:
-                      MainAxisAlignment.start,
-                      children: [TypingBubble()],
-                    );
-                  }
-                  return null;
-                }
-              },
-            )),
-            Row(
+        body: LayoutBuilder(
+          builder: (_, _) {
+            return Column(
               children: [
-                if (chatProvider.inputType == "message") ...[
-                  Expanded(child: const MessageInput()),
-                ] else ...[
-                  Expanded(child: const AudioInput()),
-                ],
-                IconButton(
-                  onPressed: () async {
-                    if (chatProvider.inputType == "audio") {
-                      if (chatProvider.isRecordingFinished) {
-                        //send audio
-                        String message = await chatProvider
-                            .sendVoiceMessage();
-                        if (context.mounted) {
-                          if (message.contains("error")) {
-                            SnackBarHelper.showSnackBar(
-                              context,
-                              "Error",
-                              message,
-                            );
-                          } else {
-                            SnackBarHelper.showSnackBar(
-                              context,
-                              "Success",
-                              message,
-                            );
-                          }
-                        }
-                      }
-                    } else {
-                      chatProvider.inputType = "audio";
-                    }
-                  },
-                  icon: Icon(
-                    chatProvider.isRecording
-                        ? Icons.record_voice_over
-                        : chatProvider.isRecordingFinished
-                        ? Icons.send
-                        : Icons.mic_outlined,
-                  ),
+                Expanded(
+                  child: receiver == null
+                      ? const Center(child: Text('Conversation not found'))
+                      : Column(
+                          children: [
+                            // Messages list
+                            messages.isEmpty
+                                ? Center(
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.chat_bubble_outline,
+                                          size: 60,
+                                          color: Colors.grey.shade400,
+                                        ),
+                                        const SizedBox(height: 12),
+                                        Text(
+                                          'No messages yet',
+                                          style: TextStyle(
+                                            color: Colors.grey.shade500,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Say hello to ${_getDisplayName(receiver)}',
+                                          style: TextStyle(
+                                            color: Colors.grey.shade400,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                : Expanded(
+                                    child: ListView.builder(
+                                      controller: chatProvider.scrollController,
+                                      //   reverse: false,
+                                      shrinkWrap: true,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 12,
+                                      ),
+                                      itemCount: messages.length + 1,
+                                      itemBuilder: (context, index) {
+                                        if (index < messages.length) {
+                                          final message = messages[index];
+
+                                          final isMe =
+                                              message.senderId == currentUserId;
+                                          return MessageBubble(
+                                            isMe: isMe,
+                                            message: message,
+                                          );
+                                        } else {
+                                          if (chatProvider
+                                              .isReceiverUserTyping) {
+                                            return Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.start,
+                                              children: [TypingBubble()],
+                                            );
+                                          }
+                                          return null;
+                                        }
+                                      },
+                                    ),
+                                  ),
+                            Row(
+                              children: [
+                                if (chatProvider.inputType == "message") ...[
+                                  Expanded(child: const MessageInput()),
+                                ] else ...[
+                                  Expanded(child: const AudioInput()),
+                                ],
+                                IconButton(
+                                  onPressed: () async {
+                                    if (chatProvider.inputType == "audio") {
+                                      if (chatProvider.isRecordingFinished) {
+                                        //send audio
+                                        String message = await chatProvider
+                                            .sendVoiceMessage();
+                                        if (context.mounted) {
+                                          if (message.contains("error")) {
+                                            SnackBarHelper.showSnackBar(
+                                              context,
+                                              "Error",
+                                              message,
+                                            );
+                                          } else {
+                                            SnackBarHelper.showSnackBar(
+                                              context,
+                                              "Success",
+                                              message,
+                                            );
+                                          }
+                                        }
+                                      }
+                                    } else {
+                                      chatProvider.inputType = "audio";
+                                    }
+                                  },
+                                  icon: Icon(
+                                    chatProvider.isRecording
+                                        ? Icons.record_voice_over
+                                        : chatProvider.isRecordingFinished
+                                        ? Icons.send
+                                        : Icons.mic_outlined,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                 ),
               ],
-            ),
-          ],
+            );
+          },
         ),
       ),
     );

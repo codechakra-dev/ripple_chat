@@ -83,7 +83,7 @@ class MyApp extends StatelessWidget {
       routes: {
         AppStrings.splashScreen: (context) => const SplashScreen(),
         AppStrings.homeScreen: (context) => const ChatPreviewScreen(),
-        AppStrings.chatScreen: (context) => const ChatScreen(),
+        AppStrings.chatScreen: (context) =>  ChatScreen(),
         AppStrings.forgotPasswordScreen: (context) =>
             const ForgotPasswordScreen(),
         AppStrings.loginScreen: (context) => const LoginScreen(),

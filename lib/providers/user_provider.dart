@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:ripple/core/constants/app_strings.dart';
 import 'package:ripple/core/utils/snackbar_helper.dart';
 import 'package:ripple/models/chat_model.dart';
+import 'package:ripple/models/future_response.dart';
 import 'package:ripple/models/user_model.dart';
 import '../core/utils/helper.dart';
 import '../firebase/firebase_service.dart';
@@ -26,7 +27,9 @@ class UserProvider extends ChangeNotifier {
   List<ChatModel> chats = [];
   bool isLoading = false;
   bool isUpdating = false;
-  StreamSubscription<UserModel?>? _currentStreamSubscription;
+  StreamSubscription<UserModel?>? _currentUserStreamSubscription;
+  StreamSubscription<List<UserModel>>? _userListStreamSubscription;
+  StreamSubscription<List<ChatModel>>? _chatListStreamSubscription;
 
   void appLifeCycleListener() {
     _listener ??= AppLifecycleListener(
@@ -43,8 +46,8 @@ class UserProvider extends ChangeNotifier {
 
   UserModel? get currentUser => _currentUser;
 
-  Future<void> updateUserName(
-    BuildContext context,
+  Future<FutureResponse> updateUserName(
+
     String newUserName,
     String userId,
   ) async {
@@ -53,33 +56,26 @@ class UserProvider extends ChangeNotifier {
       UserModel user = await _firebaseService.getUser(userId);
       UserModel userModel = user.copyWith(name: newUserName);
       await _firebaseService.updateUser(userModel);
-    } catch (e) {
-      if (context.mounted) {
-        SnackBarHelper.showSnackBar(
-          context,
-          "Error while updating",
-          e.toString(),
-        );
-      }
-    } finally {
       isUpdating = false;
+
+      return FutureResponse(isSuccess: true, message: "Username changed successfully!");
+    } catch (e) {
+      isUpdating = false;
+      return FutureResponse(isSuccess: false, message: "$e");
     }
   }
 
   void getUser() {
-    _currentStreamSubscription = _firebaseService
+    _currentUserStreamSubscription = _firebaseService
         .getSingleUser(_firebaseService.userUid ?? "")
         .listen((user) {
           _currentUser = user;
           notifyListeners();
-
         });
   }
 
-
-
   Future<String?> updateProfilePic(BuildContext context) async {
-    try{
+    try {
       final ImagePicker _picker = ImagePicker();
       final XFile? pickedFile = await _picker.pickImage(
         source: ImageSource.gallery,
@@ -87,45 +83,48 @@ class UserProvider extends ChangeNotifier {
       );
 
       if (pickedFile == null) return null;
-      UploadTask uploadTask = _firebaseService.uploadProfilePhoto(pickedFile, currentUser?.uid ?? '');
+      UploadTask uploadTask = _firebaseService.uploadProfilePhoto(
+        pickedFile,
+        currentUser?.uid ?? '',
+      );
 
-
-      uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
-        if (snapshot.totalBytes > 0) {
-          // Calculate percentage (0.0 to 1.0)
-          double progress = snapshot.bytesTransferred / snapshot.totalBytes;
-          //onProgress(progress);
-        }
-      }, onError: (e) {
-        debugPrint('Error inside progress listener: $e');
-      });
-
+      uploadTask.snapshotEvents.listen(
+        (TaskSnapshot snapshot) {
+          if (snapshot.totalBytes > 0) {
+            // Calculate percentage (0.0 to 1.0)
+            double progress = snapshot.bytesTransferred / snapshot.totalBytes;
+            //onProgress(progress);
+          }
+        },
+        onError: (e) {
+          debugPrint('Error inside progress listener: $e');
+        },
+      );
 
       TaskSnapshot completedSnapshot = await uploadTask;
 
       // 6. Retrieve the public download URL
       String downloadUrl = await completedSnapshot.ref.getDownloadURL();
-      await _updateProfilePicUrl( downloadUrl, _currentUser?.uid ?? "" );
+      await _updateProfilePicUrl(downloadUrl, _currentUser?.uid ?? "");
       return downloadUrl;
-    }catch(e){
-
-      if(context.mounted){
-        SnackBarHelper.showSnackBar(context, "Error: ", "Failed to update profile pic");
+    } catch (e) {
+      if (context.mounted) {
+        SnackBarHelper.showSnackBar(
+          context,
+          "Error: ",
+          "Failed to update profile pic",
+        );
       }
       return null;
     }
   }
-  Future<void> _updateProfilePicUrl(
 
-      String url,
-      String userId,
-      ) async {
-
-      UserModel user = await _firebaseService.getUser(userId);
-      UserModel userModel = user.copyWith(photoUrl: url);
-      await _firebaseService.updateUser(userModel);
-
+  Future<void> _updateProfilePicUrl(String url, String userId) async {
+    UserModel user = await _firebaseService.getUser(userId);
+    UserModel userModel = user.copyWith(photoUrl: url);
+    await _firebaseService.updateUser(userModel);
   }
+
   void startConversation(
     UserModel receiverUser,
     BuildContext context,
@@ -150,11 +149,13 @@ class UserProvider extends ChangeNotifier {
   void getAvailableUsers() {
     try {
       isLoading = true;
-      _firebaseService.getAllUsers().listen((list) {
-        users = list;
-        // print("Users : ${list[0].name}");
-        notifyListeners();
-      });
+      _userListStreamSubscription = _firebaseService
+          .getAllUsers()
+          .listen((list) {
+            users = list;
+            // print("Users : ${list[0].name}");
+            notifyListeners();
+          });
 
       isLoading = false;
     } catch (e) {
@@ -164,7 +165,7 @@ class UserProvider extends ChangeNotifier {
 
   void getChats() {
     try {
-      _firebaseService.getAllChats().listen((list) {
+    _chatListStreamSubscription =  _firebaseService.getAllChats().listen((list) {
         chats = list;
         notifyListeners();
       });
@@ -173,14 +174,15 @@ class UserProvider extends ChangeNotifier {
     }
   }
 
-
-  void cancelCurrentUserSubscription(){
-
-    _currentStreamSubscription?.cancel();
+  void cancelCurrentUserSubscription() {
+    _currentUserStreamSubscription?.cancel();
   }
+
   void disposeListeners() {
+    _chatListStreamSubscription?.cancel();
+    _userListStreamSubscription?.cancel();
     _listener?.dispose();
-    _currentStreamSubscription?.cancel();
+    _currentUserStreamSubscription?.cancel();
   }
 
   @override

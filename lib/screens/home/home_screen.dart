@@ -19,6 +19,7 @@ class ChatPreviewScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final chatProvider = context.watch<ChatProvider>();
     final userProvider = context.read<UserProvider>();
+     userProvider.getUser();
     userProvider.appLifeCycleListener();
     chatProvider.createChatPreviewsOnStart();
     final previews = chatProvider.chatPreviews;
@@ -53,11 +54,8 @@ class ChatPreviewScreen extends StatelessWidget {
               // Handle the tap
               switch (action) {
                 case MenuAction.profile:
-                  // Navigate to profile or show a dialog
-                  //   ScaffoldMessenger.of(context).showSnackBar(
-                  //     const SnackBar(content: Text('Profile tapped!')),
-                  //   );
 
+                  chatProvider.setIsUserProfile(true);
                   Navigator.pushNamed(context, AppStrings.profileScreen);
                   // Navigator.push(context, MaterialPageRoute(...));
                   break;

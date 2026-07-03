@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ripple/core/utils/snackbar_helper.dart';
+import 'package:ripple/models/future_response.dart';
 import 'package:ripple/models/message_model.dart';
 import 'package:ripple/models/user_model.dart';
 import 'package:ripple/providers/auth_provider.dart';
@@ -12,6 +13,8 @@ import 'package:flutter/services.dart';
 import 'package:ripple/widgets/audio_input.dart';
 import 'package:ripple/widgets/audio_player_widget.dart';
 import 'package:ripple/widgets/typing_bubble.dart';
+
+import '../../core/constants/app_strings.dart';
 
 class ChatScreen extends StatelessWidget {
   const ChatScreen({super.key});
@@ -46,169 +49,189 @@ class ChatScreen extends StatelessWidget {
     print("Input type = ${chatProvider.inputType}");
 
     // 3️⃣ Build UI
-    return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: Colors.blue.shade100,
-              child: _buildAvatarContent(receiver),
-            ),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (bool didPop, Object? result) {
+        // if (didPop) return;
+
+        //Navigator.pop(context);
+        SystemChannels.textInput.invokeMethod('TextInput.hide');
+        chatProvider.messageInputController.text = "";
+        chatProvider.currentChatId = "";
+        chatProvider.previousMessageTimeStamp = null;
+        chatProvider.closeSubscriptions();
+      },
+      child: Scaffold(
+        resizeToAvoidBottomInset: false,
+
+        appBar: AppBar(
+          title: GestureDetector(
+            onTap: () {
+              chatProvider.setIsUserProfile(false);
+              Navigator.pushNamed(context, AppStrings.profileScreen);
+            },
+            child: Row(
               children: [
-                Text(
-                  _getDisplayName(receiver),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: Colors.blue.shade100,
+                  child: _buildAvatarContent(receiver),
                 ),
-                Text(
-                  isOnline ? 'Online' : 'Offline',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isOnline ? Colors.green : Colors.grey,
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _getDisplayName(receiver),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Text(
+                      isOnline ? 'Online' : 'Offline',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isOnline ? Colors.green : Colors.grey,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          elevation: 0.5,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              Navigator.pop(context);
+
+              //Hides keyboard
+              SystemChannels.textInput.invokeMethod('TextInput.hide');
+              chatProvider.messageInputController.text = "";
+              chatProvider.currentChatId = "";
+              chatProvider.previousMessageTimeStamp = null;
+              chatProvider.closeSubscriptions();
+            },
+          ),
+        ),
+        body: receiver == null
+            ? const Center(child: Text('Conversation not found'))
+            : Column(
+          children: [
+            // Messages list
+            messages.isEmpty
+                ? Center(
+              child: Column(
+                mainAxisAlignment:
+                MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.chat_bubble_outline,
+                    size: 60,
+                    color: Colors.grey.shade400,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'No messages yet',
+                    style: TextStyle(
+                      color: Colors.grey.shade500,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Say hello to ${_getDisplayName(receiver)}',
+                    style: TextStyle(
+                      color: Colors.grey.shade400,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            )
+                : Expanded(child: ListView.builder(
+              controller:
+              chatProvider.scrollController,
+              //   reverse: false,
+              shrinkWrap: true,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 12,
+              ),
+              itemCount: messages.length + 1,
+              itemBuilder: (context, index) {
+                if (index < messages.length) {
+                  final message = messages[index];
+
+                  final isMe =
+                      message.senderId ==
+                          currentUserId;
+                  return MessageBubble(
+                    isMe: isMe,
+                    message: message,
+                  );
+                } else {
+                  if (chatProvider
+                      .isReceiverUserTyping) {
+                    return Row(
+                      mainAxisAlignment:
+                      MainAxisAlignment.start,
+                      children: [TypingBubble()],
+                    );
+                  }
+                  return null;
+                }
+              },
+            )),
+            Row(
+              children: [
+                if (chatProvider.inputType == "message") ...[
+                  Expanded(child: const MessageInput()),
+                ] else ...[
+                  Expanded(child: const AudioInput()),
+                ],
+                IconButton(
+                  onPressed: () async {
+                    if (chatProvider.inputType == "audio") {
+                      if (chatProvider.isRecordingFinished) {
+                        //send audio
+                        String message = await chatProvider
+                            .sendVoiceMessage();
+                        if (context.mounted) {
+                          if (message.contains("error")) {
+                            SnackBarHelper.showSnackBar(
+                              context,
+                              "Error",
+                              message,
+                            );
+                          } else {
+                            SnackBarHelper.showSnackBar(
+                              context,
+                              "Success",
+                              message,
+                            );
+                          }
+                        }
+                      }
+                    } else {
+                      chatProvider.inputType = "audio";
+                    }
+                  },
+                  icon: Icon(
+                    chatProvider.isRecording
+                        ? Icons.record_voice_over
+                        : chatProvider.isRecordingFinished
+                        ? Icons.send
+                        : Icons.mic_outlined,
                   ),
                 ),
               ],
             ),
           ],
         ),
-
-        elevation: 0.5,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context);
-
-            //Hides keyboard
-            SystemChannels.textInput.invokeMethod('TextInput.hide');
-            chatProvider.messageInputController.text = "";
-            chatProvider.currentChatId = "";
-            chatProvider.previousMessageTimeStamp = null;
-            chatProvider.closeSubscriptions();
-          },
-        ),
       ),
-      body: receiver == null
-          ? const Center(child: Text('Conversation not found'))
-          : Column(
-              children: [
-                Expanded(
-                  child: Column(
-                    children: [
-                      // Messages list
-                      Expanded(
-                        child: messages.isEmpty
-                            ? Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.chat_bubble_outline,
-                                      size: 60,
-                                      color: Colors.grey.shade400,
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      'No messages yet',
-                                      style: TextStyle(
-                                        color: Colors.grey.shade500,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Say hello to ${_getDisplayName(receiver)}',
-                                      style: TextStyle(
-                                        color: Colors.grey.shade400,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              )
-                            : ListView.builder(
-                                controller: chatProvider.scrollController,
-                                reverse: false,
-                                shrinkWrap: true,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 12,
-                                ),
-                                itemCount: messages.length + 1,
-                                itemBuilder: (context, index) {
-                                  if (index < messages.length) {
-                                    final message = messages[index];
-
-                                    final isMe =
-                                        message.senderId == currentUserId;
-                                    return MessageBubble(
-                                      isMe: isMe,
-                                      message: message,
-                                    );
-                                  } else {
-                                    if (chatProvider.isReceiverUserTyping) {
-                                      return Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.start,
-                                        children: [TypingBubble()],
-                                      );
-                                    }
-                                    return null;
-                                  }
-                                },
-                              ),
-                      ),
-                      // Input field
-                      const SizedBox(height: 10),
-
-                      Row(
-                        children: [
-                          if (chatProvider.inputType == "message") ...[
-                            Expanded(child: const MessageInput()),
-                          ] else ...[
-                            Expanded(child: const AudioInput()),
-                          ],
-                          IconButton(
-                            onPressed: () async {
-                              if (chatProvider.inputType == "audio") {
-                                if (chatProvider.isRecordingFinished) {
-                                  //send audio
-                                    String message = await chatProvider.sendVoiceMessage();
-                                  if(context.mounted){
-                                    if(message.contains("error"))
-                                    {
-                                      SnackBarHelper.showSnackBar(context, "Error", message);
-                                    }else{
-                                      SnackBarHelper.showSnackBar(context, "Success", message);
-                                    }
-                                  }
-                                }
-                              } else {
-                                chatProvider.inputType = "audio";
-                              }
-                            },
-                            icon: Icon(
-                              chatProvider.isRecording
-                                  ? Icons.record_voice_over
-                                  : chatProvider.isRecordingFinished
-                                  ? Icons.send
-                                  : Icons.mic_outlined,
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      //_buildMessageInput(context, chatId, currentUserId),
-                    ],
-                  ),
-                ),
-              ],
-            ),
     );
   }
 
@@ -330,7 +353,6 @@ class MessageBubble extends StatelessWidget {
 
   void _confirmDelete(BuildContext context) {
     context.read<ChatProvider>().deleteMessage(
-      context,
       message,
       context.read<UserProvider>().receiverUser,
     );
@@ -366,11 +388,9 @@ class MessageBubble extends StatelessWidget {
             children: [
               if (message.messageType == MessageType.image) ...[
                 Image.network(message.message),
-              ]else if(message.messageType == MessageType.voice)...[
-
+              ] else if (message.messageType == MessageType.voice) ...[
                 AudioPlayerWidget(url: message.message),
-              ]
-              else ...[
+              ] else ...[
                 Text(
                   message.message,
                   style: TextStyle(
@@ -426,11 +446,22 @@ class MessageInput extends StatelessWidget {
                   borderSide: BorderSide.none,
                 ),
                 suffixIcon: IconButton(
-                  onPressed: () {
-                    context.read<ChatProvider>().sendPhoto(
-                      context,
-                      receiverUser: context.read<UserProvider>().receiverUser,
-                    );
+                  onPressed: () async {
+                    FutureResponse response = await context
+                        .read<ChatProvider>()
+                        .sendPhoto(
+                          receiverUser: context
+                              .read<UserProvider>()
+                              .receiverUser,
+                        );
+
+                    if (context.mounted) {
+                      SnackBarHelper.showSnackBar(
+                        context,
+                        response.isSuccess ? "Success" : "Error",
+                        response.message,
+                      );
+                    }
                   },
                   icon: Icon(Icons.add_photo_alternate_outlined),
                 ),
@@ -456,7 +487,6 @@ class MessageInput extends StatelessWidget {
                     icon: const Icon(Icons.send, color: Colors.white),
                     onPressed: () {
                       context.read<ChatProvider>().sendMessage(
-                        context,
                         receiverUser: context.read<UserProvider>().receiverUser,
                       );
                     },

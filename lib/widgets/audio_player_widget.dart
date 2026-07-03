@@ -22,7 +22,7 @@ class AudioPlayerWidget extends StatefulWidget {
 class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   final AudioPlayer _player = AudioPlayer();
   bool _isPlaying = false;
-  bool _isLoading = false;          // ✅ manual loading flag
+  bool _isLoading = false; // ✅ manual loading flag
   Duration _duration = Duration.zero;
   Duration _position = Duration.zero;
 
@@ -41,37 +41,45 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   void _initListeners() {
     // Listen for total duration
     _player.onDurationChanged.listen((Duration d) {
-      setState(() => _duration = d);
+      if (mounted) {
+        setState(() => _duration = d);
+      }
     });
 
     // Listen for current playback position
     _player.onPositionChanged.listen((Duration p) {
-      setState(() => _position = p);
+      if (mounted) {
+        setState(() => _position = p);
+      }
     });
 
     // Listen for player state changes
     _player.onPlayerStateChanged.listen((PlayerState state) {
-      setState(() {
-        // ✅ Handle only the valid states (lowercase)
-        if (state == PlayerState.playing) {
-          _isLoading = false;
-          _isPlaying = true;
-        } else if (state == PlayerState.paused ||
-            state == PlayerState.stopped ||
-            state == PlayerState.completed) {
-          _isPlaying = false;
-          _isLoading = false;
-        }
-      });
+      if (mounted) {
+        setState(() {
+          // ✅ Handle only the valid states (lowercase)
+          if (state == PlayerState.playing) {
+            _isLoading = false;
+            _isPlaying = true;
+          } else if (state == PlayerState.paused ||
+              state == PlayerState.stopped ||
+              state == PlayerState.completed) {
+            _isPlaying = false;
+            _isLoading = false;
+          }
+        });
+      }
     });
 
     // Handle completion
     _player.onPlayerComplete.listen((_) {
-      setState(() {
-        _isPlaying = false;
-        _position = Duration.zero;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isPlaying = false;
+          _position = Duration.zero;
+          _isLoading = false;
+        });
+      }
     });
   }
 
@@ -83,9 +91,9 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to play audio: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to play audio: $e')));
       }
     }
   }
@@ -126,15 +134,15 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
             child: Center(
               child: _isLoading
                   ? SizedBox(
-                width: widget.buttonSize * 0.5,
-                height: widget.buttonSize * 0.5,
-                child: const CircularProgressIndicator(strokeWidth: 2),
-              )
+                      width: widget.buttonSize * 0.5,
+                      height: widget.buttonSize * 0.5,
+                      child: const CircularProgressIndicator(strokeWidth: 2),
+                    )
                   : Icon(
-                _isPlaying ? Icons.pause : Icons.play_arrow,
-                color: color,
-                size: widget.buttonSize * 0.6,
-              ),
+                      _isPlaying ? Icons.pause : Icons.play_arrow,
+                      color: color,
+                      size: widget.buttonSize * 0.6,
+                    ),
             ),
           ),
         ),
@@ -157,10 +165,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
             padding: const EdgeInsets.only(top: 4.0),
             child: Text(
               '${_formatDuration(_position)} / ${_formatDuration(_duration)}',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey.shade600,
-              ),
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
             ),
           ),
       ],

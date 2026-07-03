@@ -10,6 +10,7 @@ import 'package:ripple/firebase/firebase_service.dart';
 import 'package:flutter/material.dart';
 import 'package:ripple/models/chat_model.dart';
 import 'package:ripple/models/chat_preview_model.dart';
+import 'package:ripple/models/future_response.dart';
 import 'package:ripple/models/message_model.dart';
 import 'package:ripple/models/user_model.dart';
 import '../core/utils/helper.dart';
@@ -27,6 +28,15 @@ class ChatProvider extends ChangeNotifier {
   bool _isRecording = false;
   bool _isRecordingPaused = false;
   bool _isRecorderInitialized = false;
+  bool _isUserProfile = true;
+
+  //---
+  bool get isUserProfile =>  _isUserProfile;
+  void setIsUserProfile(bool value){
+    _isUserProfile = value;
+    notifyListeners();
+  }
+  //---
 
   bool get isRecorderInitialized => _isRecorderInitialized;
   final AudioRecorder _recorder = AudioRecorder();
@@ -43,6 +53,9 @@ class ChatProvider extends ChangeNotifier {
 
   Timer? _timer;
   DateTime? _startTime;
+
+  //Chat list subscription
+  StreamSubscription<List<ChatModel>>? _chatStreamSubscription;
 
   Future<String> initRecorder() async {
     if (!await _recorder.hasPermission()) {
@@ -157,7 +170,7 @@ Future<String> _sendAudioFile(File file) async{
        messageType: MessageType.voice,
      );
 
-     print("current chatId : $currentChatId");
+
      await _firebaseService.createChat(
        ChatModel(
          chatId: currentChatId ?? '',
@@ -165,7 +178,7 @@ Future<String> _sendAudioFile(File file) async{
          lastMessage: message.message,
        ),
      );
-     print("CurrentChatId $currentChatId");
+
      await addMessage(currentChatId ?? "", message);
      await closeRecorder();
      return "voice message sent";
@@ -266,7 +279,7 @@ Future<String> _sendAudioFile(File file) async{
     } else {
       _showSearch = false;
     }
-    print("showSearch: ${_showSearch}");
+
     notifyListeners();
   }
 
@@ -303,6 +316,7 @@ Future<String> _sendAudioFile(File file) async{
     _liveStatusSubscription = _firebaseService.getSingleUser(userId).listen((
       user,
     ) {
+      receiverUser = user;
       isReceiverUserOnline = user.isOnline;
       isReceiverUserTyping = user.isTyping;
       notifyListeners();
@@ -328,7 +342,7 @@ Future<String> _sendAudioFile(File file) async{
 
   //Fetches live chatPreview list
   void createChatPreviewsOnStart() async {
-    _firebaseService.getAllChats().listen((chatList) async {
+   _chatStreamSubscription =  _firebaseService.getAllChats().listen((chatList) async {
       List<ChatPreviewModel> newChatPreview = [];
       for (ChatModel chat in chatList) {
         String userId_1 = chat.participants[0];
@@ -381,8 +395,8 @@ Future<String> _sendAudioFile(File file) async{
     await _firebaseService.addMessage(chatId, message);
   }
 
-  Future<void> sendMessage(
-    BuildContext context, {
+  Future<FutureResponse> sendMessage(
+   {
     required UserModel? receiverUser,
   }) async {
     _isMessageBeingSent = true;
@@ -400,7 +414,7 @@ Future<String> _sendAudioFile(File file) async{
         final receiver = receiverUser;
         if (receiver == null) {
           print('Receiver is null');
-          return;
+          return FutureResponse(isSuccess: false, message: "Receiver cannot be null");
         }
 
         final message = MessageModel(
@@ -423,21 +437,22 @@ Future<String> _sendAudioFile(File file) async{
         print('MessageId : sending');
         // print('MessageId : ${id}');
         messageInputController.text = "";
-      } else {
-        print('MessageId : else  ${currentChatId}');
-        print('MessageId : else  ${text}');
+        _isMessageBeingSent = false;
+        return FutureResponse(isSuccess: true, message: "Message sent");
+      }else{
+        _isMessageBeingSent = false;
+        return FutureResponse(isSuccess: false, message: "Message cannot be empty");
       }
+
     } catch (e) {
-      if (context.mounted) {
-        SnackBarHelper.showSnackBar(context, "Error sending message", "$e");
-      }
-    } finally {
       _isMessageBeingSent = false;
+      return FutureResponse(isSuccess: false, message: "$e");
+
     }
   }
 
-  Future<void> sendPhoto(
-    BuildContext context, {
+  Future<FutureResponse> sendPhoto(
+     {
     required UserModel? receiverUser,
   }) async {
     try {
@@ -451,7 +466,7 @@ Future<String> _sendAudioFile(File file) async{
         imageQuality: 80, // Optional compression to save storage bandwidth
       );
 
-      if (pickedFile == null) return;
+      if (pickedFile == null) return FutureResponse(isSuccess: false, message: 'Please select a photo!');
 
       _isMessageBeingSent = true;
       messageInputController.text = pickedFile.name;
@@ -496,22 +511,20 @@ Future<String> _sendAudioFile(File file) async{
       );
       print("CurrentChatId $currentChatId");
       await addMessage(currentChatId ?? "", message);
-
-      //return downloadUrl;
-    } catch (e) {
-      if (context.mounted) {
-        SnackBarHelper.showSnackBar(context, "Error: ", "Failed to send image");
-      }
-      print("Error sending photo: $e");
-      //return null;
-    } finally {
       messageInputController.text = "";
       _isMessageBeingSent = false;
+      //return downloadUrl;
+      return FutureResponse(isSuccess: true, message: "Photo sent successfully!");
+    } catch (e) {
+      messageInputController.text = "";
+      _isMessageBeingSent = false;
+      return FutureResponse(isSuccess: false, message: "$e");
+
+
     }
   }
 
-  Future<void> deleteMessage(
-    BuildContext context,
+  Future<FutureResponse> deleteMessage(
     MessageModel message,
     UserModel? receiverUser,
   ) async {
@@ -521,13 +534,11 @@ Future<String> _sendAudioFile(File file) async{
         receiverUser?.uid ?? '',
       );
       await _firebaseService.deleteMessage(currentChatId!, message);
-      // if(context.mounted){
-      //   SnackBarHelper.showSnackBar(context, "Success ", "Deleted message!");
-      // }
+
+
+      return FutureResponse(isSuccess: true, message: "Message deleted successfully!");
     } catch (e) {
-      if (context.mounted) {
-        SnackBarHelper.showSnackBar(context, "Error in deleting: ", "$e");
-      }
+      return FutureResponse(isSuccess: false, message: "$e");
     }
   }
 
@@ -538,6 +549,7 @@ Future<String> _sendAudioFile(File file) async{
 
   @override
   void dispose() {
+    _chatStreamSubscription?.cancel();
     messageInputController.dispose();
     scrollController.dispose();
     searchTextController.dispose();

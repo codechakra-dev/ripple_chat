@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
@@ -28,12 +30,12 @@ class AuthenticationProvider extends ChangeNotifier {
   final FirebaseService _firebaseService = FirebaseService();
 
   User? get currentUser => _currentUser;
-
+  StreamSubscription<User?>? _userStreamSubscription;
   //Call this method in splash screen
   void onInitialization() {
 
     // _firebaseUser = _authService.firebaseAuth.currentUser;
-    _authService.firebaseAuth.authStateChanges().listen((user) {
+  _userStreamSubscription =  _authService.firebaseAuth.authStateChanges().listen((user) {
       // _firebaseUser = user;
       if (user == null) {
         navigatorKey.currentState?.pushReplacementNamed(AppStrings.loginScreen);
@@ -319,6 +321,7 @@ class AuthenticationProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    _userStreamSubscription?.cancel();
     emailController.dispose();
     passwordController.dispose();
     confirmPasswordController.dispose();

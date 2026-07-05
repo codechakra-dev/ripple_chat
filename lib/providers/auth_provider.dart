@@ -32,9 +32,11 @@ class AuthenticationProvider extends ChangeNotifier {
   User? get currentUser => _currentUser;
   StreamSubscription<User?>? _userStreamSubscription;
   //Call this method in splash screen
-  void onInitialization() {
+  void onInitialization() async {
 
     // _firebaseUser = _authService.firebaseAuth.currentUser;
+
+   await _userStreamSubscription?.cancel();
   _userStreamSubscription =  _authService.firebaseAuth.authStateChanges().listen((user) {
       // _firebaseUser = user;
       if (user == null) {
@@ -78,6 +80,8 @@ class AuthenticationProvider extends ChangeNotifier {
         );
       }
     } catch (e) {
+
+      print("Google signin error: $e");
       if (context.mounted) {
         SnackBarHelper.showSnackBar(context, "Error", e.toString());
       }

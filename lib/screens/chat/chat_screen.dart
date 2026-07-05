@@ -16,24 +16,29 @@ import 'package:ripple/widgets/typing_bubble.dart';
 
 import '../../core/constants/app_strings.dart';
 
-class ChatScreen extends StatelessWidget {
+class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // 1️⃣ Read providers
-    final userProvider = context.read<UserProvider>();
-    final chatProvider = context.watch<ChatProvider>();
-    final authProvider = context.read<AuthenticationProvider>();
+  State<ChatScreen> createState() => _ChatScreenState();
+}
 
-    final chatId = userProvider.currentChatId;
-    final receiver = userProvider.receiverUser;
-    final messages = chatProvider.messages;
-    final isOnline = chatProvider.isReceiverUserOnline;
-    final currentUserId = authProvider.currentUser?.uid ?? '';
+class _ChatScreenState extends State<ChatScreen> {
+  bool runOnlyOnce = false;
 
-    // 2️⃣ Load messages & status (only once per chatId change)
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
+
+
+      final chatProvider = context.read<ChatProvider>();
+      final userProvider = context.read<UserProvider>();
+      final receiver = userProvider.receiverUser;
+      final chatId = userProvider.currentChatId;
+      chatProvider.onInit();
       if (chatId.isNotEmpty) {
         // Only load if messages are empty OR the chatId changed (optional safety)
         // Our getMessages method cancels previous subscription anyway.
@@ -44,9 +49,26 @@ class ChatScreen extends StatelessWidget {
         chatProvider.getReceiverUserLiveStatus(receiver.uid);
       }
 
-      chatProvider.onInit();
+
     });
-    print("Input type = ${chatProvider.inputType}");
+  }
+  @override
+  Widget build(BuildContext context) {
+    // 1️⃣ Read providers
+
+    final userProvider = context.read<UserProvider>();
+    final chatProvider = context.watch<ChatProvider>();
+    final authProvider = context.read<AuthenticationProvider>();
+
+    final chatId = userProvider.currentChatId;
+    final receiver = userProvider.receiverUser;
+    final messages = chatProvider.messages;
+    final isOnline = chatProvider.isReceiverUserOnline;
+    final currentUserId = authProvider.currentUser?.uid ?? '';
+
+
+ 
+    // 2️⃣ Load messages & status (only once per chatId change)
 
     // 3️⃣ Build UI
     return PopScope(
@@ -59,6 +81,7 @@ class ChatScreen extends StatelessWidget {
         chatProvider.messageInputController.text = "";
         chatProvider.currentChatId = "";
         chatProvider.previousMessageTimeStamp = null;
+        chatProvider.removeListenerForMessageInputController();
         chatProvider.closeSubscriptions();
       },
       child: Scaffold(
@@ -159,7 +182,7 @@ class ChatScreen extends StatelessWidget {
                                 : Expanded(
                                     child: ListView.builder(
                                       controller: chatProvider.scrollController,
-                                      //   reverse: false,
+                                        reverse: true,
                                       shrinkWrap: true,
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 8,
@@ -190,64 +213,67 @@ class ChatScreen extends StatelessWidget {
                                       },
                                     ),
                                   ),
-                            Row(
-                              children: [
-                                if (chatProvider.inputType == "message") ...[
-                                  Expanded(child: const MessageInput()),
-                                ] else ...[
-                                  Expanded(child: const AudioInput()),
-                                ],
-                                IconButton(
-                                  onPressed: () async {
-                                    if (chatProvider.inputType == "audio") {
-                                      if (chatProvider.isRecordingFinished) {
-                                        //send audio
-                                        String message = await chatProvider
-                                            .sendVoiceMessage();
-                                        if (context.mounted) {
-                                          if (message.contains("error")) {
-                                            SnackBarHelper.showSnackBar(
-                                              context,
-                                              "Error",
-                                              message,
-                                            );
-                                          } else {
-                                            SnackBarHelper.showSnackBar(
-                                              context,
-                                              "Success",
-                                              message,
-                                            );
-                                          }
-                                        }
-                                      }
-                                    } else {
-                                      chatProvider.inputType = "audio";
-                                    }
-                                  },
-                                  icon: Icon(
-                                    chatProvider.isRecording
-                                        ? Icons.record_voice_over
-                                        : chatProvider.isRecordingFinished
-                                        ? Icons.send
-                                        : Icons.mic_outlined,
-                                  ),
-                                ),
-                              ],
-                            ),
+
                           ],
                         ),
                 ),
+
+                Row(
+                  children: [
+                    if (chatProvider.inputType == "message") ...[
+                      Expanded(
+                        child: const MessageInput(),
+                      ),
+                    ] else ...[
+                      Expanded(child: const AudioInput()),
+                    ],
+                    IconButton(
+                      onPressed: () async {
+                        if (chatProvider.inputType == "audio") {
+                          if (chatProvider.isRecordingFinished) {
+                            //send audio
+                            String message = await chatProvider
+                                .sendVoiceMessage();
+                            if (context.mounted) {
+                              if (message.contains("error")) {
+                                SnackBarHelper.showSnackBar(
+                                  context,
+                                  "Error",
+                                  message,
+                                );
+                              } else {
+                                SnackBarHelper.showSnackBar(
+                                  context,
+                                  "Success",
+                                  message,
+                                );
+                              }
+                            }
+                          }
+                        } else {
+                          chatProvider.inputType = "audio";
+                        }
+                      },
+                      icon: Icon(
+                        chatProvider.isRecording
+                            ? Icons.record_voice_over
+                            : chatProvider.isRecordingFinished
+                            ? Icons.send
+                            : Icons.mic_outlined,
+                      ),
+                    ),
+                  ],
+                )
               ],
             );
           },
         ),
+
       ),
     );
   }
 
   // ---- Message Bubble ----
-
-  // ---- Helpers (unchanged) ----
   Widget _buildAvatarContent(UserModel? user) {
     if (user == null) return const Text('?');
     final hasPhoto = user.photoUrl != null && user.photoUrl!.isNotEmpty;
@@ -287,12 +313,17 @@ class ChatScreen extends StatelessWidget {
   }
 }
 
-class MessageBubble extends StatelessWidget {
+class MessageBubble extends StatefulWidget {
   final bool isMe;
   final MessageModel message;
 
-  MessageBubble({required this.isMe, required this.message, super.key});
+  const MessageBubble({required this.isMe, required this.message, super.key});
 
+  @override
+  State<MessageBubble> createState() => _MessageBubbleState();
+}
+
+class _MessageBubbleState extends State<MessageBubble> {
   String _formatTime(DateTime? dateTime) {
     if (dateTime == null) return '';
     final now = DateTime.now();
@@ -363,7 +394,7 @@ class MessageBubble extends StatelessWidget {
 
   void _confirmDelete(BuildContext context) {
     context.read<ChatProvider>().deleteMessage(
-      message,
+      widget.message,
       context.read<UserProvider>().receiverUser,
     );
   }
@@ -376,19 +407,19 @@ class MessageBubble extends StatelessWidget {
         _showContextMenu(context);
       },
       child: Align(
-        alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+        alignment: widget.isMe ? Alignment.centerRight : Alignment.centerLeft,
         child: Container(
           margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
-            color: isMe ? Colors.blue : Colors.grey.shade300,
+            color: widget.isMe ? Colors.blue : Colors.grey.shade300,
             borderRadius: BorderRadius.only(
               topLeft: const Radius.circular(16),
               topRight: const Radius.circular(16),
-              bottomLeft: isMe
+              bottomLeft: widget.isMe
                   ? const Radius.circular(16)
                   : const Radius.circular(4),
-              bottomRight: isMe
+              bottomRight: widget.isMe
                   ? const Radius.circular(4)
                   : const Radius.circular(16),
             ),
@@ -396,24 +427,24 @@ class MessageBubble extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              if (message.messageType == MessageType.image) ...[
-                Image.network(message.message),
-              ] else if (message.messageType == MessageType.voice) ...[
-                AudioPlayerWidget(url: message.message),
+              if (widget.message.messageType == MessageType.image) ...[
+                Image.network(widget.message.message),
+              ] else if (widget.message.messageType == MessageType.voice) ...[
+                AudioPlayerWidget(url: widget.message.message),
               ] else ...[
                 Text(
-                  message.message,
+                  widget.message.message,
                   style: TextStyle(
-                    color: isMe ? Colors.white : Colors.black87,
+                    color: widget.isMe ? Colors.white : Colors.black87,
                     fontSize: 16,
                   ),
                 ),
               ],
               const SizedBox(height: 4),
               Text(
-                _formatTime(message.timestamp),
+                _formatTime(widget.message.timestamp),
                 style: TextStyle(
-                  color: isMe ? Colors.white70 : Colors.black54,
+                  color: widget.isMe ? Colors.white70 : Colors.black54,
                   fontSize: 10,
                 ),
               ),

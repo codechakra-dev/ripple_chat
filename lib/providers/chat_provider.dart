@@ -285,9 +285,9 @@ Future<String> _sendAudioFile(File file) async{
 
   void onInit() {
     messageInputController.addListener(_onTextChanged);
-    // scrollController.addListener((){
-    //   scrollToBottom();
-    // });
+  }
+  void removeListenerForMessageInputController(){
+    messageInputController.removeListener(_onTextChanged);
   }
 
   void _onTextChanged() {
@@ -312,7 +312,8 @@ Future<String> _sendAudioFile(File file) async{
   bool get showSearch => _showSearch;
 
   //--Function to get receiver user online status
-  void getReceiverUserLiveStatus(String userId) {
+  void getReceiverUserLiveStatus(String userId) async {
+    await _liveStatusSubscription?.cancel();
     _liveStatusSubscription = _firebaseService.getSingleUser(userId).listen((
       user,
     ) {
@@ -331,17 +332,14 @@ Future<String> _sendAudioFile(File file) async{
     // Check if the controller is safely attached to the widget
 
     if (_scrollController.hasClients) {
-      _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
-      // _scrollController.animateTo(
-      //   _scrollController.position.maxScrollExtent, // Target position
-      //   duration: const Duration(milliseconds: 10), // Speed
-      //   curve: Curves.linear, // Animation style
-      // );
+      _scrollController.jumpTo(_scrollController.position.minScrollExtent);
+
     }
   }
 
   //Fetches live chatPreview list
   void createChatPreviewsOnStart() async {
+  await  _chatStreamSubscription?.cancel();
    _chatStreamSubscription =  _firebaseService.getAllChats().listen((chatList) async {
       List<ChatPreviewModel> newChatPreview = [];
       for (ChatModel chat in chatList) {
@@ -374,7 +372,7 @@ Future<String> _sendAudioFile(File file) async{
   //Get messages for current chatId
   void getMessages(String chatId) async {
     //bool doesChatExists =  await _firebaseService.doesChatExists(chatId);
-
+    await _messageSubscription?.cancel();
     _messageSubscription = _firebaseService
         .getMessageForCurrentConvo(chatId)
         .listen((messageList) {
@@ -550,6 +548,7 @@ Future<String> _sendAudioFile(File file) async{
   @override
   void dispose() {
     _chatStreamSubscription?.cancel();
+    messageInputController.removeListener(_onTextChanged);
     messageInputController.dispose();
     scrollController.dispose();
     searchTextController.dispose();

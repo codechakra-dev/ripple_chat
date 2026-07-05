@@ -31,7 +31,8 @@ class UserProvider extends ChangeNotifier {
   StreamSubscription<List<UserModel>>? _userListStreamSubscription;
   StreamSubscription<List<ChatModel>>? _chatListStreamSubscription;
 
-  void appLifeCycleListener() {
+  void appLifeCycleListener()
+  {
     _listener ??= AppLifecycleListener(
       onResume: () async {
         await _firebaseService.updateCurrentStatus(true);
@@ -65,7 +66,8 @@ class UserProvider extends ChangeNotifier {
     }
   }
 
-  void getUser() {
+  void getUser()  async {
+    _currentUserStreamSubscription?.cancel();
     _currentUserStreamSubscription = _firebaseService
         .getSingleUser(_firebaseService.userUid ?? "")
         .listen((user) {
@@ -149,6 +151,7 @@ class UserProvider extends ChangeNotifier {
   void getAvailableUsers() {
     try {
       isLoading = true;
+      _userListStreamSubscription?.cancel();
       _userListStreamSubscription = _firebaseService
           .getAllUsers()
           .listen((list) {
@@ -163,8 +166,9 @@ class UserProvider extends ChangeNotifier {
     }
   }
 
-  void getChats() {
+  void getChats() async {
     try {
+      _chatListStreamSubscription?.cancel();
     _chatListStreamSubscription =  _firebaseService.getAllChats().listen((list) {
         chats = list;
         notifyListeners();

@@ -129,7 +129,7 @@ class FirebaseService {
         .collection("chats")
         .doc(chatId)
         .collection("messages")
-        .orderBy('timestamp', descending: false)
+        .orderBy('timestamp', descending: true)
         .snapshots()
         .map((snapshot) {
           return snapshot.docs

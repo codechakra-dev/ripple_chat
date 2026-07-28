@@ -32,8 +32,6 @@ class _ChatScreenState extends State<ChatScreen> {
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-
-
       final chatProvider = context.read<ChatProvider>();
       final userProvider = context.read<UserProvider>();
       final receiver = userProvider.receiverUser;
@@ -48,10 +46,9 @@ class _ChatScreenState extends State<ChatScreen> {
       if (receiver != null && receiver.uid.isNotEmpty) {
         chatProvider.getReceiverUserLiveStatus(receiver.uid);
       }
-
-
     });
   }
+
   @override
   Widget build(BuildContext context) {
     // 1️⃣ Read providers
@@ -66,8 +63,6 @@ class _ChatScreenState extends State<ChatScreen> {
     final isOnline = chatProvider.isReceiverUserOnline;
     final currentUserId = authProvider.currentUser?.uid ?? '';
 
-
- 
     // 2️⃣ Load messages & status (only once per chatId change)
 
     // 3️⃣ Build UI
@@ -180,40 +175,44 @@ class _ChatScreenState extends State<ChatScreen> {
                                     ),
                                   )
                                 : Expanded(
-                                    child: ListView.builder(
-                                      controller: chatProvider.scrollController,
-                                        reverse: true,
-                                      shrinkWrap: true,
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 12,
-                                      ),
-                                      itemCount: messages.length + 1,
-                                      itemBuilder: (context, index) {
-                                        if (index < messages.length) {
-                                          final message = messages[index];
+                                    child: Column(
+                                      children: [
+                                        Expanded(
+                                          child: ListView.builder(
+                                            controller:
+                                                chatProvider.scrollController,
+                                            reverse: true,
+                                            shrinkWrap: true,
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 12,
+                                            ),
+                                            itemCount: messages.length,
+                                            itemBuilder: (context, index) {
+                                              final message = messages[index];
 
-                                          final isMe =
-                                              message.senderId == currentUserId;
-                                          return MessageBubble(
-                                            isMe: isMe,
-                                            message: message,
-                                          );
-                                        } else {
-                                          if (chatProvider
-                                              .isReceiverUserTyping) {
-                                            return Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.start,
-                                              children: [TypingBubble()],
-                                            );
-                                          }
-                                          return null;
-                                        }
-                                      },
+                                              final isMe =
+                                                  message.senderId ==
+                                                  currentUserId;
+                                              return MessageBubble(
+                                                isMe: isMe,
+                                                message: message,
+                                              );
+                                            },
+                                          ),
+                                        ),
+
+                                        if (chatProvider
+                                            .isReceiverUserTyping) ...[
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.start,
+                                            children: [TypingBubble()],
+                                          ),
+                                        ],
+                                      ],
                                     ),
                                   ),
-
                           ],
                         ),
                 ),
@@ -221,9 +220,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 Row(
                   children: [
                     if (chatProvider.inputType == "message") ...[
-                      Expanded(
-                        child: const MessageInput(),
-                      ),
+                      Expanded(child: const MessageInput()),
                     ] else ...[
                       Expanded(child: const AudioInput()),
                     ],
@@ -263,12 +260,11 @@ class _ChatScreenState extends State<ChatScreen> {
                       ),
                     ),
                   ],
-                )
+                ),
               ],
             );
           },
         ),
-
       ),
     );
   }

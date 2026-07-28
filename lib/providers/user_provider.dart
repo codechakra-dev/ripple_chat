@@ -33,6 +33,8 @@ class UserProvider extends ChangeNotifier {
 
   void appLifeCycleListener()
   {
+
+
     _listener ??= AppLifecycleListener(
       onResume: () async {
         await _firebaseService.updateCurrentStatus(true);

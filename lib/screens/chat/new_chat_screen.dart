@@ -5,6 +5,8 @@ import 'package:ripple/models/user_model.dart';
 import 'package:ripple/providers/auth_provider.dart';
 import 'package:ripple/providers/user_provider.dart';
 
+import '../../core/constants/app_strings.dart';
+
 class NewChatScreen extends StatefulWidget {
   const NewChatScreen({super.key});
 
@@ -187,7 +189,8 @@ class _NewChatScreenState extends State<NewChatScreen> {
       trailing: const Icon(Icons.chevron_right, color: Colors.grey),
       onTap: () {
         //Navigate to chat screen to start conversation
-        context.read<UserProvider>().startConversation(user, context, false);
+        context.read<UserProvider>().startConversation(user,false);
+        Navigator.pushReplacementNamed(context, AppStrings.chatScreen);
       },
     );
   }

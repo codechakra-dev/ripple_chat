@@ -1,12 +1,16 @@
 // screens/chat_preview_screen.dart
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ripple/core/constants/app_strings.dart';
 import 'package:ripple/models/chat_preview_model.dart';
 import 'package:ripple/providers/chat_provider.dart';
 import 'package:ripple/screens/chat/chat_screen.dart';
+import 'package:ripple/widgets/custom_text.dart';
 
+import '../../core/utils/snackbar_helper.dart';
 import '../../models/user_model.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/user_provider.dart';
 import '../chat/new_chat_screen.dart'; // your ChatScreen
 
@@ -19,7 +23,7 @@ class ChatPreviewScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final chatProvider = context.watch<ChatProvider>();
     final userProvider = context.read<UserProvider>();
-     userProvider.getUser();
+    userProvider.getUser();
     userProvider.appLifeCycleListener();
     chatProvider.createChatPreviewsOnStart();
     final previews = chatProvider.chatPreviews;
@@ -54,7 +58,6 @@ class ChatPreviewScreen extends StatelessWidget {
               // Handle the tap
               switch (action) {
                 case MenuAction.profile:
-
                   chatProvider.setIsUserProfile(true);
                   Navigator.pushNamed(context, AppStrings.profileScreen);
                   // Navigator.push(context, MaterialPageRoute(...));
@@ -65,6 +68,42 @@ class ChatPreviewScreen extends StatelessWidget {
                   break;
                 case MenuAction.logout:
                   // Handle logout
+
+                  showDialog(
+                    context: context,
+                    builder: (context) {
+                      return AlertDialog(
+                        title: CustomText(text: "Do you want to logout?"),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                            },
+                            child: CustomText(text: "Cancel"),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              try {
+                                context
+                                    .read<AuthenticationProvider>()
+                                    .signOut();
+                              } catch (e) {
+                                if (context.debugDoingBuild) {
+                                  SnackBarHelper.showSnackBar(
+                                    context,
+                                    "Sign-out Failed",
+                                    "Unexpected error occurred : $e",
+                                  );
+                                }
+                              }
+                            },
+                            child: CustomText(text: "Yes"),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+
                   break;
               }
             },
@@ -159,7 +198,7 @@ class ChatPreviewScreen extends StatelessWidget {
           ? _buildEmptyState()
           : ListView.separated(
               padding: const EdgeInsets.symmetric(vertical: 8),
-              itemCount: displayPreview.length ,
+              itemCount: displayPreview.length,
               separatorBuilder: (_, __) => const Divider(height: 1, indent: 72),
               itemBuilder: (context, index) {
                 final preview = displayPreview[index];
@@ -272,7 +311,8 @@ class ChatPreviewScreen extends StatelessWidget {
         ],
       ),
       onTap: () {
-        context.read<UserProvider>().startConversation(user, context, true);
+        context.read<UserProvider>().startConversation(user, true);
+        Navigator.pushNamed(context, AppStrings.chatScreen);
       },
     );
   }

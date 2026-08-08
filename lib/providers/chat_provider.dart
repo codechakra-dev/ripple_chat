@@ -372,6 +372,8 @@ Future<String> _sendAudioFile(File file) async{
   //Get messages for current chatId
   void getMessages(String chatId) async {
     //bool doesChatExists =  await _firebaseService.doesChatExists(chatId);
+    messages = [];
+    notifyListeners();
     await _messageSubscription?.cancel();
     _messageSubscription = _firebaseService
         .getMessageForCurrentConvo(chatId)

@@ -131,7 +131,7 @@ class UserProvider extends ChangeNotifier {
 
   void startConversation(
     UserModel receiverUser,
-    BuildContext context,
+
     bool isHomeScreen,
   ) {
     String? currentUserId = _firebaseService.userUid;
@@ -143,11 +143,11 @@ class UserProvider extends ChangeNotifier {
 
     // Navigate to ChatScreen and remove NewChatScreen from the stack
 
-    if (isHomeScreen) {
-      Navigator.pushNamed(context, AppStrings.chatScreen);
-    } else {
-      Navigator.pushReplacementNamed(context, AppStrings.chatScreen);
-    }
+    // if (isHomeScreen) {
+    //   Navigator.pushNamed(context, AppStrings.chatScreen);
+    // } else {
+    //   Navigator.pushReplacementNamed(context, AppStrings.chatScreen);
+    // }
   }
 
   void getAvailableUsers() {

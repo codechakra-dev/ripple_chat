@@ -424,7 +424,7 @@ class _MessageBubbleState extends State<MessageBubble> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               if (widget.message.messageType == MessageType.image) ...[
-                Image.network(widget.message.message),
+                Image.network(widget.message.message, height: 80, width: 80,),
               ] else if (widget.message.messageType == MessageType.voice) ...[
                 AudioPlayerWidget(url: widget.message.message),
               ] else ...[

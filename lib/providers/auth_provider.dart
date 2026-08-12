@@ -23,7 +23,7 @@ class AuthenticationProvider extends ChangeNotifier {
   var isLoading = false;
 
   var isCodeSent = false;
-  var hidePassword = false;
+  var hidePassword = true;
 
    User? _currentUser;
   final AuthService _authService = AuthService();
@@ -40,12 +40,21 @@ class AuthenticationProvider extends ChangeNotifier {
   _userStreamSubscription =  _authService.firebaseAuth.authStateChanges().listen((user) {
       // _firebaseUser = user;
       if (user == null) {
-        navigatorKey.currentState?.pushReplacementNamed(AppStrings.loginScreen);
+        if(navigatorKey.currentContext != null){
+
+        Navigator.pushNamedAndRemoveUntil(navigatorKey.currentContext!, AppStrings.loginScreen,  (route) => false,);
+        }
+       //navigatorKey.currentState?.pushReplacementNamed(AppStrings.loginScreen);
       } else {
         _currentUser = user;
         clearAllControllers();
-        navigatorKey.currentState?.pushReplacementNamed(AppStrings.homeScreen);
+        if(navigatorKey.currentContext != null){
+
+          Navigator.pushNamedAndRemoveUntil(navigatorKey.currentContext!, AppStrings.homeScreen,  (route) => false,);
+        }
+       // navigatorKey.currentState?.pushReplacementNamed(AppStrings.homeScreen);
       }
+
       notifyListeners();
     });
 
@@ -206,18 +215,12 @@ class AuthenticationProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> signOut(BuildContext context) async {
+  Future<void> signOut() async {
     try {
       isLoading = true;
       await _authService.logout();
     } catch (e) {
-      if (context.mounted) {
-        SnackBarHelper.showSnackBar(
-          context,
-          "Sign-out Failed",
-          "Unexpected error occurred : $e",
-        );
-      }
+     throw Exception(e.toString());
     } finally {
       isLoading = false;
     }

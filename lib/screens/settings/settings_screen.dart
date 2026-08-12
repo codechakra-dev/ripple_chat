@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ripple/providers/settings_provider.dart';
 
